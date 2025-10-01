@@ -153,7 +153,7 @@ with colA:
                 row["摘要"] = new_note
                 log_event("摘要", new_note, entity_id=row["id"])
             if coly.selectbox("定型句", [""] + phrases, key=row["id"] + "_ph"):
-                sel = coly.session_state[row["id"] + "_ph"]
+                sel = st.session_state[row["id"] + "_ph"]
                 if sel:
                     row["摘要"] = (row["摘要"] + " " + sel).strip()
                     log_event("定型句", sel, "select", entity_id=row["id"])
