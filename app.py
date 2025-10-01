@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import time, json, os
 from datetime import date
+import subprocess
 
 st.set_page_config(page_title="経費精算 実験", layout="wide")
 
@@ -89,7 +90,7 @@ with colA:
                 "摘要": "",
             }
             st.session_state["rows"].append(row)
-            log_event("add_row", cat, "button", entity_id=row["id"])
+            log_event("add_row", cat + " 追加", "button", entity_id=row["id"])
 
     # 明細編集
     for row in st.session_state["rows"]:
@@ -189,10 +190,21 @@ with colA:
             df.to_csv(LOG_FILE, index=False)
         else:
             df.to_csv(LOG_FILE, mode="a", header=False, index=False)
+
         st.success(
             f"{pressed} 完了。所要時間: {elapsed:.2f}s / 明細 {len(st.session_state['rows'])}件"
         )
         st.session_state["start_time"] = None
+
+        if mode == "パーソナライズUI" and user_id:
+            # aggregate.pyの実行
+            try:
+                subprocess.run(["python", "aggressive.py"], check=True)
+                load_config(user_id)  # 再読み込み
+                st.info("個別設定を更新しました")
+            except subprocess.CalledProcessError as e:
+                st.error(f"集計処理でエラーが発生しました: {e}")
+
 
 with colB:
     st.subheader("申請サマリ")
