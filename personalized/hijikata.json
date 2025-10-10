@@ -1,0 +1,32 @@
+{
+  "category_order": [
+    "その他",
+    "交通費",
+    "宿泊費",
+    "会議費",
+    "物品"
+  ],
+  "button_order": [
+    "登録",
+    "クリア",
+    "下書き保存"
+  ],
+  "suggest": {
+    "stations": [
+      "東京",
+      "品川",
+      "新大阪"
+    ],
+    "vendors": [],
+    "purpose_phrases": [
+      "顧客訪問",
+      "定例会議",
+      "出張"
+    ]
+  },
+  "defaults": {
+    "project": "A-42",
+    "tax": 10,
+    "payment": "立替"
+  }
+}
