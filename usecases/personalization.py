@@ -11,7 +11,13 @@ class Personalization:
     def load_config(self, user_id):
         os.makedirs(CONFIG_DIR, exist_ok=True)
 
+        if not os.path.exists(LOG_FILE):
+            return None
         logs = pd.read_csv(LOG_FILE, dtype=str)
+
+        if not logs or logs.empty:
+            return None
+
         logs["value"] = logs["value"].fillna("")
 
         for uid, g in logs.groupby("user_id"):
@@ -91,3 +97,5 @@ class Personalization:
             ) as f:
                 json.dump(cfg, f, ensure_ascii=False, indent=2)
             print(f"generated: {uid}.json")
+
+        return cfg

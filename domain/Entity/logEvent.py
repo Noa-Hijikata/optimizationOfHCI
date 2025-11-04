@@ -9,6 +9,7 @@ class LogEvent:
     user_id: str
     mode: str
     event: str
-    field: str
+    category: str
+    action: str
     value: str
-    entity_id: str
+    success: bool

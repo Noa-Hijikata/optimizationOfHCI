@@ -1,10 +1,22 @@
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 import streamlit as st
+
+from presentation.const import UIMode, EventType
+from domain.constants import CATEGORIES, BUTTONS_BASE
+from infrastructure.csvRepository import CSVLogRepository
 from presentation.sidebar import render_sidebar
-from presentation.components import render_expense_rows, render_summary
+from presentation.components import (
+    render_summary,
+    render_expense_form_trnsprts,
+    render_expense_form_businessTrip,
+)
 from usecases.expenseReport import ExpenseReport
 from usecases.personalization import Personalization
 from usecases.logging import Logging
-from domain.constants import CATEGORIES, BUTTONS_BASE
 
 
 def run_app():
@@ -13,30 +25,68 @@ def run_app():
     # --- サイドバー（設定入力） ---
     user_config = render_sidebar()
 
+    # --- ゲートウェイ層を初期化 ---
+    log_gateway = CSVLogRepository(log_path="data/logs.csv")
+
     # --- ユースケース層を初期化 ---
-    log_usecase = Logging(log_path="data/logs.csv")
+    log_usecase = Logging(log_gateway)
     config_usecase = Personalization(config_dir="personalized")
-    task_usecase = ExpenseReport(log_usecase, config_usecase)
+    task_usecase = ExpenseReport(log_usecase)
 
     # --- パーソナライズ設定読込 ---
     config = None
-    if user_config["mode"] == "パーソナライズUI" and user_config["user_id"]:
+    if user_config["mode"] == UIMode.PERSONALIZE.value and user_config["user_id"]:
         config = config_usecase.load_config(user_config["user_id"])
 
-    category_order = config.get("category_order", CATEGORIES) if config else CATEGORIES
-    button_order = config.get("button_order", BUTTONS_BASE) if config else BUTTONS_BASE
-    defaults = config.get("defaults", {}) if config else {}
-    suggest = config.get("suggest", {}) if config else {}
+    if config:
+        category_order = config.get("category_order", CATEGORIES)
+        button_order = config.get("button_order", BUTTONS_BASE)
+        defaults = config.get("defaults", {})
+        suggest = config.get("suggest", {})
+    else:
+        category_order = CATEGORIES
+        button_order = BUTTONS_BASE
+        defaults = {}
+        suggest = {}
 
     # --- メインUI ---
     st.title("経費精算（実験用）")
-    colA, colB = st.columns([3, 2])
+    colA, colB = st.columns([5, 2])
 
     with colA:
-        task_usecase.render_task_start(user_config["user_id"])
-        rows = render_expense_rows(category_order, defaults, suggest, log_usecase)
-        pressed = task_usecase.render_action_buttons(button_order)
-        if pressed:
-            task_usecase.save_logs(user_config["user_id"], user_config["mode"], rows)
+        st.subheader("新規申請")
+        if st.button("タスク開始", disabled=not user_config["user_id"]):
+            # --- セッション管理 ---
+            if "use_id" not in st.session_state:
+                st.session_state["user_id"] = user_config["user_id"]
+            if "mode" not in st.session_state:
+                st.session_state["mode"] = user_config["mode"]
+            # --- タスク開始処理 ---
+            task_usecase.start_task()
+            st.session_state["task_started"] = True
+
+        if st.session_state.get("task_started"):
+            # --- クイック追加 ---
+            st.caption("よく使う区分から追加")
+            pill_cols = st.columns(len(category_order))
+            for i, cat in enumerate(category_order):
+                if pill_cols[i].button(cat, use_container_width=True):
+                    task_usecase.add_event(event=EventType.BUTTON.value, category=cat)
+                    # print("追加")
+                    # st.session_state["test_dialog"] = True
+                    st.session_state[cat] = True
+
+        # if st.session_state.get("test_dialog", False):
+        #     test_dialog()
+        if st.session_state.get("交通費精算", False):
+            render_expense_form_trnsprts(task_usecase)
+
+        if st.session_state.get("出張精算", False):
+            render_expense_form_businessTrip(task_usecase)
+
     with colB:
-        render_summary(rows, category_order, button_order, config, user_config["mode"])
+        render_summary(category_order, button_order, config, user_config["mode"])
+
+
+if __name__ == "__main__":
+    run_app()
