@@ -2,7 +2,12 @@ import streamlit as st
 import time
 from datetime import date
 
-from presentation.const import EventType, UIMode
+from presentation.const import (
+    EventType,
+    UIMode,
+    SessionManagementItems as smi,
+    ActionType,
+)
 from domain.constants import TAX_OPTIONS, PAYMENT_OPTIONS, TRANSPORTATION, BUTTONS_BASE
 from usecases.expenseReport import ExpenseReport
 
@@ -21,41 +26,47 @@ def render_expense_form_trnsprts(task_usecase: ExpenseReport):
     with col11:
         user = st.text_input(
             "申請者",
-            disabled=True if st.session_state.get("user_id", False) else False,
-            value=st.session_state.get("user_id", ""),
+            disabled=True if st.session_state.get(smi.USER_ID, False) else False,
+            value=st.session_state.get(smi.USER_ID, ""),
+            key="user",
         )
     with col12:
-        exday = st.date_input("日付", value=date.today(), key="trnsprts_date")
+        exdate = st.date_input("日付", value=date.today(), key="date")
     with col13:
-        destination = st.text_input("目的地")
+        destination = st.text_input("目的地", key="destination")
 
     col21, col22, col23, col24, col25 = st.columns(5)
     with col21:
-        from_station = st.text_input("出発")
+        departure = st.text_input("出発", key="departure")
     with col22:
-        to_station = st.text_input("到着")
+        arrival = st.text_input("到着", key="arrival")
     with col23:
-        is_roundtrip = st.checkbox("往復")
+        is_roundtrip = st.checkbox("往復", key="is_roundtrip")
     with col24:
-        amount = st.number_input("金額", min_value=0, step=100)
+        amount = st.number_input("金額", min_value=0, step=100, key="amount")
     with col25:
         total = st.number_input(
-            "合計金額", value=amount * (2 if is_roundtrip else 1), disabled=True
+            "合計金額",
+            value=amount * (2 if is_roundtrip else 1),
+            disabled=True,
+            key="total",
         )
 
     col31, col32, col33, col34 = st.columns(4)
     with col31:
-        car_name = st.text_input("車名")
+        car_name = st.text_input("車名", key="car_name")
     with col32:
-        car_number = st.text_input("ナンバー")
+        car_number = st.text_input("ナンバー", key="car_number")
     with col33:
-        transportation = st.selectbox("交通機関", TRANSPORTATION)
+        transportation = st.selectbox("交通機関", TRANSPORTATION, key="transportation")
     with col34:
         uploaded_file = st.file_uploader(
-            "領収書(PDF/JPG)", type=["pdf", "jpg", "jpeg", "png"]
+            "領収書(PDF/JPG)",
+            type=["pdf", "jpg", "jpeg", "png"],
+            key="uploaded_file",
         )
 
-    purpose = st.text_input("交通目的")
+    purpose = st.text_input("交通目的", key="purpose")
 
     # submitted = st.form_submit_button("確定")
     bcols = st.columns(len(BUTTONS_BASE))
@@ -65,6 +76,30 @@ def render_expense_form_trnsprts(task_usecase: ExpenseReport):
             lb,
             use_container_width=True,
         ):
+            if lb == "確定":
+                action = ActionType.SUBMIT.value
+            else:
+                action = ActionType.CANCEL.value
+
+            task_usecase.add_event(
+                event=EventType.FORMSUBMIT.value,
+                action=ActionType.SUBMIT.value,
+                value={
+                    "user": user,
+                    "date": str(exdate),
+                    "destination": destination,
+                    "departure": departure,
+                    "arrival": arrival,
+                    "is_roundtrip": is_roundtrip,
+                    "amount": amount,
+                    "total": total,
+                    "car_name": car_name,
+                    "car_number": car_number,
+                    "transportation": transportation,
+                    "purpose": purpose,
+                    "uploaded_file": bool(uploaded_file),
+                },
+            )
             pressed = lb
 
     if pressed:
@@ -74,7 +109,7 @@ def render_expense_form_trnsprts(task_usecase: ExpenseReport):
         #     action=pressed,
         # )
         st.success(f"交通費明細を{pressed}しました。")
-        st.session_state["交通費精算"] = False
+        st.session_state[smi.CATEGORY] = None
         st.rerun()
 
 
@@ -87,58 +122,74 @@ def render_expense_form_businessTrip(task_usecase: ExpenseReport):
     with col11:
         user = st.text_input(
             "申請者",
-            disabled=True if st.session_state.get("user_id", False) else False,
-            value=st.session_state.get("user_id", ""),
+            disabled=True if st.session_state.get(smi.USER_ID, False) else False,
+            value=st.session_state.get(smi.USER_ID, ""),
+            key="user",
         )
     with col12:
         date_from = st.date_input(
-            "出張日（from）", value=date.today(), key="bussiness_trip_date_from"
+            "出張日（from）",
+            value=date.today(),
+            key="date_from",
         )
 
     with col13:
         date_to = st.date_input(
-            "出張日（To）", value=date.today(), key="bussiness_trip_date_to"
+            "出張日（To）",
+            value=date.today(),
+            key="date_to",
         )
     with col14:
-        destination = st.text_input("出張先")
+        destination = st.text_input("出張先", key="destination")
 
     col21, col22, col23, col24, col25 = st.columns(5)
     with col21:
-        from_station = st.text_input("出発")
+        departure = st.text_input("出発", key="departure")
     with col22:
-        to_station = st.text_input("到着")
+        arrival = st.text_input("到着", key="arrival")
     with col23:
-        is_roundtrip = st.checkbox("往復")
+        is_roundtrip = st.checkbox("往復", key="is_roundtrip")
     with col24:
-        amount = st.number_input("金額", min_value=0, step=100)
+        amount = st.number_input("金額", min_value=0, step=100, key="amount")
     with col25:
         total = st.number_input(
-            "合計金額", value=amount * (2 if is_roundtrip else 1), disabled=True
+            "合計金額",
+            value=amount * (2 if is_roundtrip else 1),
+            disabled=True,
+            key="total",
         )
 
     col31, col32, col33, col34 = st.columns(4)
     with col31:
-        car_name = st.text_input("車名")
+        car_name = st.text_input("車名", key="car_name")
     with col32:
-        car_number = st.text_input("ナンバー")
+        car_number = st.text_input("ナンバー", key="car_number")
     with col33:
-        transportation = st.selectbox("交通機関", TRANSPORTATION)
+        transportation = st.selectbox("交通機関", TRANSPORTATION, key="transportation")
     with col34:
         uploaded_file = st.file_uploader(
-            "領収書(PDF/JPG)", type=["pdf", "jpg", "jpeg", "png"]
+            "領収書(PDF/JPG)", type=["pdf", "jpg", "jpeg", "png"], key="uploaded_file"
         )
 
     col41, col42, col43, col44 = st.columns(4)
     with col41:
-        allowance_day = st.number_input("日当日数", min_value=0, step=1)
+        allowance_day = st.number_input(
+            "日当日数", min_value=0, step=1, key="allowance_day"
+        )
     with col42:
-        daily_allowance = st.number_input("日当金額", min_value=0)
+        daily_allowance = st.number_input(
+            "日当金額", min_value=0, key="daily_allowance"
+        )
     with col43:
-        accommodation_day = st.number_input("宿泊日数", min_value=0, step=1)
+        accommodation_day = st.number_input(
+            "宿泊日数", min_value=0, step=1, key="accommodation_day"
+        )
     with col44:
-        accommodation_fee = st.number_input("宿泊費用", min_value=0)
+        accommodation_fee = st.number_input(
+            "宿泊費用", min_value=0, key="accommodation_fee"
+        )
 
-    purpose = st.text_input("出張目的")
+    purpose = st.text_input("出張目的", key="purpose")
 
     # submitted = st.form_submit_button("確定")
     bcols = st.columns(len(BUTTONS_BASE))
@@ -148,6 +199,35 @@ def render_expense_form_businessTrip(task_usecase: ExpenseReport):
             lb,
             use_container_width=True,
         ):
+            if lb == "確定":
+                action = ActionType.SUBMIT.value
+            else:
+                action = ActionType.CANCEL.value
+
+            task_usecase.add_event(
+                event=EventType.FORMSUBMIT.value,
+                action=ActionType.SUBMIT.value,
+                value={
+                    "user": user,
+                    "date_from": str(date_from),
+                    "date_to": str(date_to),
+                    "destination": destination,
+                    "departure": departure,
+                    "arrival": arrival,
+                    "is_roundtrip": is_roundtrip,
+                    "amount": amount,
+                    "total": total,
+                    "car_name": car_name,
+                    "car_number": car_number,
+                    "transportation": transportation,
+                    "purpose": purpose,
+                    "allowance_day": allowance_day,
+                    "daily_allowance": daily_allowance,
+                    "accommodation_day": accommodation_day,
+                    "accommodation_fee": accommodation_fee,
+                    "uploaded_file": bool(uploaded_file),
+                },
+            )
             pressed = lb
 
     if pressed:
@@ -157,7 +237,7 @@ def render_expense_form_businessTrip(task_usecase: ExpenseReport):
         #     action=pressed,
         # )
         st.success(f"出張明細を{pressed}しました。")
-        st.session_state["出張精算"] = False
+        st.session_state[smi.CATEGORY] = None
         st.rerun()
 
 

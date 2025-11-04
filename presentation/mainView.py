@@ -5,8 +5,13 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import streamlit as st
 
-from presentation.const import UIMode, EventType
-from domain.constants import CATEGORIES, BUTTONS_BASE
+from presentation.const import (
+    UIMode,
+    EventType,
+    SessionManagementItems as smi,
+    ActionType,
+)
+from domain.constants import CATEGORIES, BUTTONS_BASE, CAT_TRNSPORTS, CAT_BUSINESS_TRIP
 from infrastructure.csvRepository import CSVLogRepository
 from presentation.sidebar import render_sidebar
 from presentation.components import (
@@ -57,31 +62,34 @@ def run_app():
         st.subheader("新規申請")
         if st.button("タスク開始", disabled=not user_config["user_id"]):
             # --- セッション管理 ---
-            if "use_id" not in st.session_state:
-                st.session_state["user_id"] = user_config["user_id"]
-            if "mode" not in st.session_state:
-                st.session_state["mode"] = user_config["mode"]
+            if smi.USER_ID not in st.session_state:
+                st.session_state[smi.USER_ID] = user_config["user_id"]
+            if smi.MODE not in st.session_state:
+                st.session_state[smi.MODE] = user_config["mode"]
             # --- タスク開始処理 ---
             task_usecase.start_task()
-            st.session_state["task_started"] = True
 
-        if st.session_state.get("task_started"):
+        if st.session_state.get(smi.TASK_STARTED, False):
             # --- クイック追加 ---
             st.caption("よく使う区分から追加")
             pill_cols = st.columns(len(category_order))
             for i, cat in enumerate(category_order):
                 if pill_cols[i].button(cat, use_container_width=True):
-                    task_usecase.add_event(event=EventType.BUTTON.value, category=cat)
+                    st.session_state[smi.CATEGORY] = cat
+                    task_usecase.add_event(
+                        event=EventType.BUTTON.value,
+                        action=ActionType.CATEGORY_SELECT,
+                        value=None,
+                    )
                     # print("追加")
                     # st.session_state["test_dialog"] = True
-                    st.session_state[cat] = True
 
         # if st.session_state.get("test_dialog", False):
         #     test_dialog()
-        if st.session_state.get("交通費精算", False):
+        if st.session_state.get(smi.CATEGORY) == CAT_TRNSPORTS:
             render_expense_form_trnsprts(task_usecase)
 
-        if st.session_state.get("出張精算", False):
+        if st.session_state.get(smi.CATEGORY) == CAT_BUSINESS_TRIP:
             render_expense_form_businessTrip(task_usecase)
 
     with colB:
