@@ -41,18 +41,14 @@ def run_app():
     # --- パーソナライズ設定読込 ---
     config = None
     if user_config["mode"] == UIMode.PERSONALIZE.value and user_config["user_id"]:
-        config = config_usecase.load_config(user_config["user_id"])
+        st.session_state[smi.CONFIG] = config_usecase.load_config(
+            user_config["user_id"]
+        )
 
-    if config:
-        category_order = config.get("category_order", CATEGORIES)
-        button_order = config.get("button_order", BUTTONS_BASE)
-        defaults = config.get("defaults", {})
-        suggest = config.get("suggest", {})
+    if st.session_state.get(smi.CONFIG):
+        category_order = st.session_state[smi.CONFIG].get("category_order", CATEGORIES)
     else:
         category_order = CATEGORIES
-        button_order = BUTTONS_BASE
-        defaults = {}
-        suggest = {}
 
     # --- メインUI ---
     st.title("経費精算（実験用）")
@@ -93,7 +89,7 @@ def run_app():
             render_expense_form_businessTrip(task_usecase)
 
     with colB:
-        render_summary(category_order, button_order, config, user_config["mode"])
+        render_summary(category_order, BUTTONS_BASE, config, user_config["mode"])
 
 
 if __name__ == "__main__":

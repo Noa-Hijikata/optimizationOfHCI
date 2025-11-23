@@ -1,4 +1,5 @@
 import streamlit as st
+from streamlit_tags import st_tags
 import time
 from datetime import date
 
@@ -12,6 +13,27 @@ from domain.constants import TAX_OPTIONS, PAYMENT_OPTIONS, TRANSPORTATION, BUTTO
 from usecases.expenseReport import ExpenseReport
 
 
+def render_suggest_input(label, options, key_prefix):
+    """
+    streamlit-tagsを使用したサジェスト付き入力フィールド
+    候補からの選択または自由入力が可能
+    """
+    options = options or []
+
+    # st_tagsで候補を表示しつつ自由入力も可能
+    selected = st_tags(
+        label=label,
+        text="入力して追加",
+        value=[],
+        suggestions=options,
+        key=key_prefix,
+        maxtags=1,
+    )
+
+    # maxtags=1なので最初の要素を返す
+    return selected[0] if selected else ""
+
+
 @st.dialog("test", width="large")
 def test_dialog():
     st.write("This is a test dialog.")
@@ -21,6 +43,12 @@ def test_dialog():
 def render_expense_form_trnsprts(task_usecase: ExpenseReport):
     """交通費申請フォームUI"""
     st.subheader("交通費明細入力")
+
+    config, suggests, order = {}, {}, {}
+    if st.session_state.get(smi.CONFIG):
+        tr_cfg = st.session_state[smi.CONFIG].get("trnsprts_config", {})
+        suggests = tr_cfg.get("suggests", {}) if isinstance(tr_cfg, dict) else {}
+        order = tr_cfg.get("order", {}) if isinstance(tr_cfg, dict) else {}
 
     col11, col12, col13 = st.columns(3)
     with col11:
@@ -33,13 +61,17 @@ def render_expense_form_trnsprts(task_usecase: ExpenseReport):
     with col12:
         exdate = st.date_input("日付", value=date.today(), key="date")
     with col13:
-        destination = st.text_input("目的地", key="destination")
+        destination = render_suggest_input(
+            "目的地", suggests.get("destination", []), "destination"
+        )
 
     col21, col22, col23, col24, col25 = st.columns(5)
     with col21:
-        departure = st.text_input("出発", key="departure")
+        departure = render_suggest_input(
+            "出発", suggests.get("departure", []), "departure"
+        )
     with col22:
-        arrival = st.text_input("到着", key="arrival")
+        arrival = render_suggest_input("到着", suggests.get("arrival", []), "arrival")
     with col23:
         is_roundtrip = st.checkbox("往復", key="is_roundtrip")
     with col24:
@@ -54,11 +86,19 @@ def render_expense_form_trnsprts(task_usecase: ExpenseReport):
 
     col31, col32, col33, col34 = st.columns(4)
     with col31:
-        car_name = st.text_input("車名", key="car_name")
+        car_name = render_suggest_input(
+            "車名", suggests.get("car_name", []), "car_name"
+        )
     with col32:
-        car_number = st.text_input("ナンバー", key="car_number")
+        car_number = render_suggest_input(
+            "ナンバー", suggests.get("car_number", []), "car_number"
+        )
     with col33:
-        transportation = st.selectbox("交通機関", TRANSPORTATION, key="transportation")
+        transportation = st.selectbox(
+            "交通機関",
+            order.get("transportation", TRANSPORTATION),
+            key="transportation",
+        )
     with col34:
         uploaded_file = st.file_uploader(
             "領収書(PDF/JPG)",
@@ -66,7 +106,7 @@ def render_expense_form_trnsprts(task_usecase: ExpenseReport):
             key="uploaded_file",
         )
 
-    purpose = st.text_input("交通目的", key="purpose")
+    purpose = render_suggest_input("交通目的", suggests.get("purpose", []), "purpose")
 
     # submitted = st.form_submit_button("確定")
     bcols = st.columns(len(BUTTONS_BASE))
@@ -118,6 +158,12 @@ def render_expense_form_businessTrip(task_usecase: ExpenseReport):
     """出張申請フォームUI"""
     st.subheader("出張費明細入力")
 
+    config, suggests, order = {}, {}, {}
+    if st.session_state.get(smi.CONFIG):
+        bt_cfg = st.session_state[smi.CONFIG].get("bussinessTrip_config", {})
+        suggests = bt_cfg.get("suggests", {}) if isinstance(bt_cfg, dict) else {}
+        order = bt_cfg.get("order", {}) if isinstance(bt_cfg, dict) else {}
+
     col11, col12, col13, col14 = st.columns(4)
     with col11:
         user = st.text_input(
@@ -140,13 +186,19 @@ def render_expense_form_businessTrip(task_usecase: ExpenseReport):
             key="date_to",
         )
     with col14:
-        destination = st.text_input("出張先", key="destination")
+        destination = st.selectbox(
+            "出張先", options=suggests.get("destination", []) or [""], key="destination"
+        )
 
     col21, col22, col23, col24, col25 = st.columns(5)
     with col21:
-        departure = st.text_input("出発", key="departure")
+        departure = st.selectbox(
+            "出発", options=suggests.get("departure", []) or [""], key="departure"
+        )
     with col22:
-        arrival = st.text_input("到着", key="arrival")
+        arrival = st.selectbox(
+            "到着", options=suggests.get("arrival", []) or [""], key="arrival"
+        )
     with col23:
         is_roundtrip = st.checkbox("往復", key="is_roundtrip")
     with col24:
@@ -161,11 +213,19 @@ def render_expense_form_businessTrip(task_usecase: ExpenseReport):
 
     col31, col32, col33, col34 = st.columns(4)
     with col31:
-        car_name = st.text_input("車名", key="car_name")
+        car_name = st.selectbox(
+            "車名", options=suggests.get("car_name", []) or [""], key="car_name"
+        )
     with col32:
-        car_number = st.text_input("ナンバー", key="car_number")
+        car_number = st.selectbox(
+            "ナンバー", options=suggests.get("car_number", []) or [""], key="car_number"
+        )
     with col33:
-        transportation = st.selectbox("交通機関", TRANSPORTATION, key="transportation")
+        transportation = st.selectbox(
+            "交通機関",
+            order.get("transportation", TRANSPORTATION),
+            key="transportation",
+        )
     with col34:
         uploaded_file = st.file_uploader(
             "領収書(PDF/JPG)", type=["pdf", "jpg", "jpeg", "png"], key="uploaded_file"
@@ -189,7 +249,9 @@ def render_expense_form_businessTrip(task_usecase: ExpenseReport):
             "宿泊費用", min_value=0, key="accommodation_fee"
         )
 
-    purpose = st.text_input("出張目的", key="purpose")
+    purpose = st.selectbox(
+        "出張目的", options=suggests.get("purpose", []) or [""], key="purpose"
+    )
 
     # submitted = st.form_submit_button("確定")
     bcols = st.columns(len(BUTTONS_BASE))

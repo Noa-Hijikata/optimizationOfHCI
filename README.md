@@ -4,6 +4,31 @@ user_id
 mode
 task_started
 category
+config = {
+    "category_order": [],
+    "trnsprts_cofnig": 
+        {
+            "suggests": 
+            {
+                "field": [] ...
+            }, 
+            "order": 
+            {
+                "field": [] ...
+            }
+        }
+    "bussinessTrip_config": 
+        {
+            "suggests":
+            {
+                "field": [] ...
+            },
+             "order": 
+             {
+                "field": [] ...
+            }
+        }
+}
 
 #ログ出力項目
 
