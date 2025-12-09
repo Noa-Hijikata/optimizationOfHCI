@@ -39,14 +39,14 @@ def run_app():
     task_usecase = ExpenseReport(log_usecase)
 
     # --- パーソナライズ設定読込 ---
-    config = None
     if user_config["mode"] == UIMode.PERSONALIZE.value and user_config["user_id"]:
         st.session_state[smi.CONFIG] = config_usecase.load_config(
             user_config["user_id"]
         )
 
-    if st.session_state.get(smi.CONFIG):
-        category_order = st.session_state[smi.CONFIG].get("category_order", CATEGORIES)
+    config = st.session_state.get(smi.CONFIG)
+    if config:
+        category_order = config.get("category_order", CATEGORIES)
     else:
         category_order = CATEGORIES
 
@@ -87,6 +87,69 @@ def run_app():
 
         if st.session_state.get(smi.CATEGORY) == CAT_BUSINESS_TRIP:
             render_expense_form_businessTrip(task_usecase)
+
+        # --- 最近の申請履歴セクション（パーソナライズUIのみ） ---
+        if user_config["mode"] == UIMode.PERSONALIZE.value:
+            st.divider()
+            st.subheader("最近の申請")
+            if user_config["user_id"]:
+                recent_submissions = log_gateway.get_recent_submissions(
+                    user_config["user_id"], limit=3
+                )
+                if recent_submissions:
+                    for i, submission in enumerate(recent_submissions):
+                        with st.container(border=True):
+                            col1, col2 = st.columns([4, 1])
+                            with col1:
+                                dt_str = submission["datetime"].strftime(
+                                    "%Y年%m月%d日 %H:%M"
+                                )
+                                category = submission["category"]
+                                data = submission["data"]
+
+                                # カテゴリに応じた情報表示
+                                if category == CAT_TRNSPORTS:
+                                    st.write(
+                                        f"**{category}** - {data.get('destination', 'N/A')} ({dt_str})"
+                                    )
+                                    st.caption(
+                                        f"金額: ¥{data.get('amount', 0):,} | 往復: {'はい' if data.get('is_roundtrip') else 'いいえ'}"
+                                    )
+                                elif category == CAT_BUSINESS_TRIP:
+                                    st.write(
+                                        f"**{category}** - {data.get('destination', 'N/A')} ({dt_str})"
+                                    )
+                                    total_cost = (
+                                        data.get("amount", 0)
+                                        + data.get("allowance_day", 0)
+                                        * data.get("daily_allowance", 0)
+                                        + data.get("accommodation_day", 0)
+                                        * data.get("accommodation_fee", 0)
+                                    )
+                                    st.caption(
+                                        f"期間: {data.get('date_from', 'N/A')} ～ {data.get('date_to', 'N/A')} | 合計: ¥{total_cost:,}"
+                                    )
+                                else:
+                                    st.write(f"**{category}** ({dt_str})")
+                            with col2:
+                                if st.button("読込", key=f"load_submission_{i}"):
+                                    # セッション状態に申請データを保存
+                                    st.session_state[smi.USER_ID] = user_config[
+                                        "user_id"
+                                    ]
+                                    st.session_state[smi.MODE] = user_config["mode"]
+                                    st.session_state[smi.TASK_STARTED] = True
+                                    st.session_state[smi.CATEGORY] = submission[
+                                        "category"
+                                    ]
+                                    st.session_state["loaded_submission"] = submission[
+                                        "data"
+                                    ]
+                                    st.rerun()
+                else:
+                    st.info("申請履歴がありません")
+            else:
+                st.info("ユーザーIDを入力して開始してください")
 
     with colB:
         render_summary(category_order, BUTTONS_BASE, config, user_config["mode"])

@@ -18,16 +18,29 @@ def update_value(key, value):
     st.session_state[key] = value
 
 
-def render_suggest_input(label, options, key_prefix, initial_value=""):
+def render_suggest_input(
+    label, options, key_prefix, initial_value="", enable_suggest=True
+):
     """
     軽量なサジェスト付き入力フィールド。
     入力フィールドと、マッチする候補のボタンを表示する。
     候補ボタンをクリックすると入力フィールドに値が自動反映される。
+
+    Args:
+        label: フィールドラベル
+        options: 候補オプションのリスト
+        key_prefix: Streamlit のウィジェットキー
+        initial_value: 初期値
+        enable_suggest: サジェスト機能を有効にするかどうか（固定UIの場合はFalse）
     """
     options = options or []
 
     # テキスト入力フィールド
     val = st.text_input(label, value=initial_value, key=key_prefix)
+
+    # サジェスト機能が有効の場合のみ候補を表示
+    if not enable_suggest:
+        return val
 
     # 候補をフィルタリング（入力中の文字列にマッチするもの）
     if options and val:
@@ -75,7 +88,10 @@ def render_expense_form_trnsprts(task_usecase: ExpenseReport):
     st.subheader("交通費明細入力")
 
     config, suggests, order = {}, {}, {}
-    if st.session_state.get(smi.CONFIG):
+    # パーソナライズUIの場合のみサジェスト情報を取得
+    enable_suggest = st.session_state.get(smi.MODE) == UIMode.PERSONALIZE.value
+
+    if enable_suggest and st.session_state.get(smi.CONFIG):
         tr_cfg = st.session_state[smi.CONFIG].get("trnsprts_config", {})
         suggests = tr_cfg.get("suggests", {}) if isinstance(tr_cfg, dict) else {}
         order = tr_cfg.get("order", {}) if isinstance(tr_cfg, dict) else {}
@@ -93,6 +109,7 @@ def render_expense_form_trnsprts(task_usecase: ExpenseReport):
         )
     with col12:
         from datetime import datetime
+
         date_value = date.today()
         if loaded_data.get("date"):
             try:
@@ -102,34 +119,41 @@ def render_expense_form_trnsprts(task_usecase: ExpenseReport):
         exdate = st.date_input("日付", value=date_value, key="date")
     with col13:
         destination = render_suggest_input(
-            "目的地", suggests.get("destination", []), "destination",
-            initial_value=loaded_data.get("destination", "")
+            "目的地",
+            suggests.get("destination", []),
+            "destination",
+            initial_value=loaded_data.get("destination", ""),
+            enable_suggest=enable_suggest,
         )
 
     col21, col22, col23, col24, col25 = st.columns(5)
     with col21:
         departure = render_suggest_input(
-            "出発", suggests.get("departure", []), "departure",
-            initial_value=loaded_data.get("departure", "")
+            "出発",
+            suggests.get("departure", []),
+            "departure",
+            initial_value=loaded_data.get("departure", ""),
+            enable_suggest=enable_suggest,
         )
     with col22:
         arrival = render_suggest_input(
-            "到着", suggests.get("arrival", []), "arrival",
-            initial_value=loaded_data.get("arrival", "")
+            "到着",
+            suggests.get("arrival", []),
+            "arrival",
+            initial_value=loaded_data.get("arrival", ""),
+            enable_suggest=enable_suggest,
         )
     with col23:
         is_roundtrip = st.checkbox(
-            "往復", 
-            value=loaded_data.get("is_roundtrip", False),
-            key="is_roundtrip"
+            "往復", value=loaded_data.get("is_roundtrip", False), key="is_roundtrip"
         )
     with col24:
         amount = st.number_input(
-            "金額", 
-            min_value=0, 
-            step=100, 
+            "金額",
+            min_value=0,
+            step=100,
             value=loaded_data.get("amount", 0),
-            key="amount"
+            key="amount",
         )
     with col25:
         total = st.number_input(
@@ -142,21 +166,32 @@ def render_expense_form_trnsprts(task_usecase: ExpenseReport):
     col31, col32, col33, col34 = st.columns(4)
     with col31:
         car_name = render_suggest_input(
-            "車名", suggests.get("car_name", []), "car_name",
-            initial_value=loaded_data.get("car_name", "")
+            "車名",
+            suggests.get("car_name", []),
+            "car_name",
+            initial_value=loaded_data.get("car_name", ""),
+            enable_suggest=enable_suggest,
         )
     with col32:
         car_number = render_suggest_input(
-            "ナンバー", suggests.get("car_number", []), "car_number",
-            initial_value=loaded_data.get("car_number", "")
+            "ナンバー",
+            suggests.get("car_number", []),
+            "car_number",
+            initial_value=loaded_data.get("car_number", ""),
+            enable_suggest=enable_suggest,
         )
     with col33:
         transportation = st.selectbox(
             "交通機関",
             order.get("transportation", TRANSPORTATION),
-            index=order.get("transportation", TRANSPORTATION).index(loaded_data.get("transportation")) 
-                if loaded_data.get("transportation") in order.get("transportation", TRANSPORTATION) 
-                else 0,
+            index=(
+                order.get("transportation", TRANSPORTATION).index(
+                    loaded_data.get("transportation")
+                )
+                if loaded_data.get("transportation")
+                in order.get("transportation", TRANSPORTATION)
+                else 0
+            ),
             key="transportation",
         )
     with col34:
@@ -167,8 +202,11 @@ def render_expense_form_trnsprts(task_usecase: ExpenseReport):
         )
 
     purpose = render_suggest_input(
-        "交通目的", suggests.get("purpose", []), "purpose",
-        initial_value=loaded_data.get("purpose", "")
+        "交通目的",
+        suggests.get("purpose", []),
+        "purpose",
+        initial_value=loaded_data.get("purpose", ""),
+        enable_suggest=enable_suggest,
     )
 
     # submitted = st.form_submit_button("確定")
@@ -181,28 +219,28 @@ def render_expense_form_trnsprts(task_usecase: ExpenseReport):
         ):
             if lb == "確定":
                 action = ActionType.SUBMIT.value
+                task_usecase.add_event(
+                    event=EventType.FORMSUBMIT.value,
+                    action=ActionType.SUBMIT.value,
+                    value={
+                        "user": user,
+                        "date": str(exdate),
+                        "destination": destination,
+                        "departure": departure,
+                        "arrival": arrival,
+                        "is_roundtrip": is_roundtrip,
+                        "amount": amount,
+                        "total": total,
+                        "car_name": car_name,
+                        "car_number": car_number,
+                        "transportation": transportation,
+                        "purpose": purpose,
+                        "uploaded_file": bool(uploaded_file),
+                    },
+                )
             else:
                 action = ActionType.CANCEL.value
 
-            task_usecase.add_event(
-                event=EventType.FORMSUBMIT.value,
-                action=ActionType.SUBMIT.value,
-                value={
-                    "user": user,
-                    "date": str(exdate),
-                    "destination": destination,
-                    "departure": departure,
-                    "arrival": arrival,
-                    "is_roundtrip": is_roundtrip,
-                    "amount": amount,
-                    "total": total,
-                    "car_name": car_name,
-                    "car_number": car_number,
-                    "transportation": transportation,
-                    "purpose": purpose,
-                    "uploaded_file": bool(uploaded_file),
-                },
-            )
             pressed = lb
 
     if pressed:
@@ -213,6 +251,35 @@ def render_expense_form_trnsprts(task_usecase: ExpenseReport):
         # )
         st.success(f"交通費明細を{pressed}しました。")
         st.session_state[smi.CATEGORY] = None
+
+        # キャンセル時はセッション状態をクリアして次回は空白状態にする
+        if lb == "キャンセル":
+            # フォーム関連のキーをすべてクリア
+            form_keys = [
+                "date",
+                "destination",
+                "destination_selected",
+                "departure",
+                "departure_selected",
+                "arrival",
+                "arrival_selected",
+                "is_roundtrip",
+                "amount",
+                "total",
+                "car_name",
+                "car_name_selected",
+                "car_number",
+                "car_number_selected",
+                "transportation",
+                "purpose",
+                "purpose_selected",
+                "uploaded_file",
+                "loaded_submission",
+            ]
+            for key in form_keys:
+                if key in st.session_state:
+                    del st.session_state[key]
+
         st.rerun()
 
 
@@ -222,10 +289,16 @@ def render_expense_form_businessTrip(task_usecase: ExpenseReport):
     st.subheader("出張費明細入力")
 
     config, suggests, order = {}, {}, {}
-    if st.session_state.get(smi.CONFIG):
+    # パーソナライズUIの場合のみサジェスト情報を取得
+    enable_suggest = st.session_state.get(smi.MODE) == UIMode.PERSONALIZE.value
+
+    if enable_suggest and st.session_state.get(smi.CONFIG):
         bt_cfg = st.session_state[smi.CONFIG].get("bussinessTrip_config", {})
         suggests = bt_cfg.get("suggests", {}) if isinstance(bt_cfg, dict) else {}
         order = bt_cfg.get("order", {}) if isinstance(bt_cfg, dict) else {}
+
+    # 読み込まれた申請データがあればそれを初期値として使用
+    loaded_data = st.session_state.get("loaded_submission", {})
 
     col11, col12, col13, col14 = st.columns(4)
     with col11:
@@ -236,84 +309,160 @@ def render_expense_form_businessTrip(task_usecase: ExpenseReport):
             key="user",
         )
     with col12:
+        from datetime import datetime
+
+        date_from_value = date.today()
+        if loaded_data.get("date_from"):
+            try:
+                date_from_value = datetime.strptime(
+                    loaded_data["date_from"], "%Y-%m-%d"
+                ).date()
+            except:
+                pass
         date_from = st.date_input(
             "出張日（from）",
-            value=date.today(),
+            value=date_from_value,
             key="date_from",
         )
 
     with col13:
+        date_to_value = date.today()
+        if loaded_data.get("date_to"):
+            try:
+                date_to_value = datetime.strptime(
+                    loaded_data["date_to"], "%Y-%m-%d"
+                ).date()
+            except:
+                pass
         date_to = st.date_input(
             "出張日（To）",
-            value=date.today(),
+            value=date_to_value,
             key="date_to",
         )
     with col14:
-        destination = st.selectbox(
-            "出張先", options=suggests.get("destination", []) or [""], key="destination"
+        destination = render_suggest_input(
+            "出張先",
+            suggests.get("destination", []),
+            "destination_trip",
+            initial_value=loaded_data.get("destination", ""),
+            enable_suggest=enable_suggest,
         )
 
     col21, col22, col23, col24, col25 = st.columns(5)
     with col21:
-        departure = st.selectbox(
-            "出発", options=suggests.get("departure", []) or [""], key="departure"
+        departure = render_suggest_input(
+            "出発",
+            suggests.get("departure", []),
+            "departure_trip",
+            initial_value=loaded_data.get("departure", ""),
+            enable_suggest=enable_suggest,
         )
     with col22:
-        arrival = st.selectbox(
-            "到着", options=suggests.get("arrival", []) or [""], key="arrival"
+        arrival = render_suggest_input(
+            "到着",
+            suggests.get("arrival", []),
+            "arrival_trip",
+            initial_value=loaded_data.get("arrival", ""),
+            enable_suggest=enable_suggest,
         )
     with col23:
-        is_roundtrip = st.checkbox("往復", key="is_roundtrip")
+        is_roundtrip = st.checkbox(
+            "往復",
+            value=loaded_data.get("is_roundtrip", False),
+            key="is_roundtrip_trip",
+        )
     with col24:
-        amount = st.number_input("金額", min_value=0, step=100, key="amount")
+        amount = st.number_input(
+            "金額",
+            min_value=0,
+            step=100,
+            value=loaded_data.get("amount", 0),
+            key="amount_trip",
+        )
     with col25:
         total = st.number_input(
             "合計金額",
             value=amount * (2 if is_roundtrip else 1),
             disabled=True,
-            key="total",
+            key="total_trip",
         )
 
     col31, col32, col33, col34 = st.columns(4)
     with col31:
-        car_name = st.selectbox(
-            "車名", options=suggests.get("car_name", []) or [""], key="car_name"
+        car_name = render_suggest_input(
+            "車名",
+            suggests.get("car_name", []),
+            "car_name_trip",
+            initial_value=loaded_data.get("car_name", ""),
+            enable_suggest=enable_suggest,
         )
     with col32:
-        car_number = st.selectbox(
-            "ナンバー", options=suggests.get("car_number", []) or [""], key="car_number"
+        car_number = render_suggest_input(
+            "ナンバー",
+            suggests.get("car_number", []),
+            "car_number_trip",
+            initial_value=loaded_data.get("car_number", ""),
+            enable_suggest=enable_suggest,
         )
     with col33:
+        transportation_idx = 0
+        if loaded_data.get("transportation") and loaded_data.get(
+            "transportation"
+        ) in order.get("transportation", TRANSPORTATION):
+            transportation_idx = order.get("transportation", TRANSPORTATION).index(
+                loaded_data.get("transportation")
+            )
         transportation = st.selectbox(
             "交通機関",
             order.get("transportation", TRANSPORTATION),
-            key="transportation",
+            index=transportation_idx,
+            key="transportation_trip",
         )
     with col34:
         uploaded_file = st.file_uploader(
-            "領収書(PDF/JPG)", type=["pdf", "jpg", "jpeg", "png"], key="uploaded_file"
+            "領収書(PDF/JPG)",
+            type=["pdf", "jpg", "jpeg", "png"],
+            key="uploaded_file_trip",
         )
 
     col41, col42, col43, col44 = st.columns(4)
     with col41:
         allowance_day = st.number_input(
-            "日当日数", min_value=0, step=1, key="allowance_day"
+            "日当日数",
+            min_value=0,
+            step=1,
+            value=loaded_data.get("allowance_day", 0),
+            key="allowance_day",
         )
     with col42:
         daily_allowance = st.number_input(
-            "日当金額", min_value=0, key="daily_allowance"
+            "日当金額",
+            min_value=0,
+            value=loaded_data.get("daily_allowance", 0),
+            key="daily_allowance",
         )
     with col43:
         accommodation_day = st.number_input(
-            "宿泊日数", min_value=0, step=1, key="accommodation_day"
+            "宿泊日数",
+            min_value=0,
+            step=1,
+            value=loaded_data.get("accommodation_day", 0),
+            key="accommodation_day",
         )
     with col44:
         accommodation_fee = st.number_input(
-            "宿泊費用", min_value=0, key="accommodation_fee"
+            "宿泊費用",
+            min_value=0,
+            value=loaded_data.get("accommodation_fee", 0),
+            key="accommodation_fee",
         )
 
-    purpose = st.selectbox(
-        "出張目的", options=suggests.get("purpose", []) or [""], key="purpose"
+    purpose = render_suggest_input(
+        "出張目的",
+        suggests.get("purpose", []),
+        "purpose_trip",
+        initial_value=loaded_data.get("purpose", ""),
+        enable_suggest=enable_suggest,
     )
 
     # submitted = st.form_submit_button("確定")
@@ -326,33 +475,33 @@ def render_expense_form_businessTrip(task_usecase: ExpenseReport):
         ):
             if lb == "確定":
                 action = ActionType.SUBMIT.value
+                task_usecase.add_event(
+                    event=EventType.FORMSUBMIT.value,
+                    action=ActionType.SUBMIT.value,
+                    value={
+                        "user": user,
+                        "date_from": str(date_from),
+                        "date_to": str(date_to),
+                        "destination": destination,
+                        "departure": departure,
+                        "arrival": arrival,
+                        "is_roundtrip": is_roundtrip,
+                        "amount": amount,
+                        "total": total,
+                        "car_name": car_name,
+                        "car_number": car_number,
+                        "transportation": transportation,
+                        "purpose": purpose,
+                        "allowance_day": allowance_day,
+                        "daily_allowance": daily_allowance,
+                        "accommodation_day": accommodation_day,
+                        "accommodation_fee": accommodation_fee,
+                        "uploaded_file": bool(uploaded_file),
+                    },
+                )
             else:
                 action = ActionType.CANCEL.value
 
-            task_usecase.add_event(
-                event=EventType.FORMSUBMIT.value,
-                action=ActionType.SUBMIT.value,
-                value={
-                    "user": user,
-                    "date_from": str(date_from),
-                    "date_to": str(date_to),
-                    "destination": destination,
-                    "departure": departure,
-                    "arrival": arrival,
-                    "is_roundtrip": is_roundtrip,
-                    "amount": amount,
-                    "total": total,
-                    "car_name": car_name,
-                    "car_number": car_number,
-                    "transportation": transportation,
-                    "purpose": purpose,
-                    "allowance_day": allowance_day,
-                    "daily_allowance": daily_allowance,
-                    "accommodation_day": accommodation_day,
-                    "accommodation_fee": accommodation_fee,
-                    "uploaded_file": bool(uploaded_file),
-                },
-            )
             pressed = lb
 
     if pressed:
@@ -363,6 +512,35 @@ def render_expense_form_businessTrip(task_usecase: ExpenseReport):
         # )
         st.success(f"出張明細を{pressed}しました。")
         st.session_state[smi.CATEGORY] = None
+
+        # キャンセル時はセッション状態をクリアして次回は空白状態にする
+        if lb == "キャンセル":
+            # フォーム関連のキーをすべてクリア
+            form_keys = [
+                "user",
+                "date_from",
+                "date_to",
+                "destination",
+                "departure",
+                "arrival",
+                "is_roundtrip",
+                "amount",
+                "total",
+                "car_name",
+                "car_number",
+                "transportation",
+                "purpose",
+                "allowance_day",
+                "daily_allowance",
+                "accommodation_day",
+                "accommodation_fee",
+                "uploaded_file",
+                "loaded_submission",
+            ]
+            for key in form_keys:
+                if key in st.session_state:
+                    del st.session_state[key]
+
         st.rerun()
 
 

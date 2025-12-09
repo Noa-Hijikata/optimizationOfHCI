@@ -71,6 +71,10 @@ class Personalization:
         raise ValueError("unexpected structure after ast parsing")
 
     def load_config(self, user_id):
+        # ユーザーIDが指定されていない場合は即座に返す
+        if not user_id or user_id.strip() == "":
+            return None
+
         os.makedirs(self.config_dir, exist_ok=True)
 
         if not os.path.exists(LOG_FILE):
@@ -86,7 +90,7 @@ class Personalization:
 
         # --- ユーザーフィルタリング ---
         g = logs[logs["user_id"] == user_id]
-        if not user_id or user_id.strip() == "":
+        if g.empty:
             return None
 
         # --- カテゴリ追加ボタン頻度 (event='button' & category in CATEGORIES) ---
