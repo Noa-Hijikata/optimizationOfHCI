@@ -2,9 +2,9 @@ CAT_TRNSPORTS = "交通費精算"
 CAT_BUSINESS_TRIP = "出張精算"
 
 CATEGORIES = [
-    CAT_TRNSPORTS,
     "出張申請",
     CAT_BUSINESS_TRIP,
+    CAT_TRNSPORTS,
     "海外出張申請",
     "海外出張精算",
     "経費申請",
