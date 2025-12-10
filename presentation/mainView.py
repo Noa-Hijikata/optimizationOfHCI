@@ -13,6 +13,7 @@ from presentation.const import (
 )
 from domain.constants import CATEGORIES, BUTTONS_BASE, CAT_TRNSPORTS, CAT_BUSINESS_TRIP
 from infrastructure.csvRepository import CSVLogRepository
+from infrastructure.approvalRepository import ApprovalRepository
 from presentation.sidebar import render_sidebar
 from presentation.components import (
     render_summary,
@@ -32,6 +33,7 @@ def run_app():
 
     # --- ゲートウェイ層を初期化 ---
     log_gateway = CSVLogRepository(log_path="data/logs.csv")
+    approval_gateway = ApprovalRepository(db_path="data/approvals.db")
 
     # --- ユースケース層を初期化 ---
     log_usecase = Logging(log_gateway)
@@ -83,10 +85,10 @@ def run_app():
         # if st.session_state.get("test_dialog", False):
         #     test_dialog()
         if st.session_state.get(smi.CATEGORY) == CAT_TRNSPORTS:
-            render_expense_form_trnsprts(task_usecase)
+            render_expense_form_trnsprts(task_usecase, approval_gateway)
 
         if st.session_state.get(smi.CATEGORY) == CAT_BUSINESS_TRIP:
-            render_expense_form_businessTrip(task_usecase)
+            render_expense_form_businessTrip(task_usecase, approval_gateway)
 
         # --- 最近の申請履歴セクション（パーソナライズUIのみ） ---
         if user_config["mode"] == UIMode.PERSONALIZE.value:

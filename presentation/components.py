@@ -83,7 +83,7 @@ def test_dialog():
 
 
 @st.dialog("交通費申請", width="large")
-def render_expense_form_trnsprts(task_usecase: ExpenseReport):
+def render_expense_form_trnsprts(task_usecase: ExpenseReport, approval_gateway=None):
     """交通費申請フォームUI"""
     st.subheader("交通費明細入力")
 
@@ -212,6 +212,21 @@ def render_expense_form_trnsprts(task_usecase: ExpenseReport):
     # submitted = st.form_submit_button("確定")
     bcols = st.columns(len(BUTTONS_BASE))
     pressed = None
+    form_data = {
+        "user": user,
+        "date": str(exdate),
+        "destination": destination,
+        "departure": departure,
+        "arrival": arrival,
+        "is_roundtrip": is_roundtrip,
+        "amount": amount,
+        "total": total,
+        "car_name": car_name,
+        "car_number": car_number,
+        "transportation": transportation,
+        "purpose": purpose,
+        "uploaded_file": bool(uploaded_file),
+    }
     for i, lb in enumerate(BUTTONS_BASE):
         if bcols[i].button(
             lb,
@@ -222,22 +237,15 @@ def render_expense_form_trnsprts(task_usecase: ExpenseReport):
                 task_usecase.add_event(
                     event=EventType.FORMSUBMIT.value,
                     action=ActionType.SUBMIT.value,
-                    value={
-                        "user": user,
-                        "date": str(exdate),
-                        "destination": destination,
-                        "departure": departure,
-                        "arrival": arrival,
-                        "is_roundtrip": is_roundtrip,
-                        "amount": amount,
-                        "total": total,
-                        "car_name": car_name,
-                        "car_number": car_number,
-                        "transportation": transportation,
-                        "purpose": purpose,
-                        "uploaded_file": bool(uploaded_file),
-                    },
+                    value=form_data,
                 )
+                # DB に申請を保存
+                if approval_gateway:
+                    approval_gateway.add_submission(
+                        user_id=user,
+                        category="交通費精算",
+                        data=form_data,
+                    )
             else:
                 action = ActionType.CANCEL.value
 
@@ -284,7 +292,9 @@ def render_expense_form_trnsprts(task_usecase: ExpenseReport):
 
 
 @st.dialog("出張費申請", width="large")
-def render_expense_form_businessTrip(task_usecase: ExpenseReport):
+def render_expense_form_businessTrip(
+    task_usecase: ExpenseReport, approval_gateway=None
+):
     """出張申請フォームUI"""
     st.subheader("出張費明細入力")
 
@@ -468,6 +478,26 @@ def render_expense_form_businessTrip(task_usecase: ExpenseReport):
     # submitted = st.form_submit_button("確定")
     bcols = st.columns(len(BUTTONS_BASE))
     pressed = None
+    form_data = {
+        "user": user,
+        "date_from": str(date_from),
+        "date_to": str(date_to),
+        "destination": destination,
+        "departure": departure,
+        "arrival": arrival,
+        "is_roundtrip": is_roundtrip,
+        "amount": amount,
+        "total": total,
+        "car_name": car_name,
+        "car_number": car_number,
+        "transportation": transportation,
+        "purpose": purpose,
+        "allowance_day": allowance_day,
+        "daily_allowance": daily_allowance,
+        "accommodation_day": accommodation_day,
+        "accommodation_fee": accommodation_fee,
+        "uploaded_file": bool(uploaded_file),
+    }
     for i, lb in enumerate(BUTTONS_BASE):
         if bcols[i].button(
             lb,
@@ -478,27 +508,15 @@ def render_expense_form_businessTrip(task_usecase: ExpenseReport):
                 task_usecase.add_event(
                     event=EventType.FORMSUBMIT.value,
                     action=ActionType.SUBMIT.value,
-                    value={
-                        "user": user,
-                        "date_from": str(date_from),
-                        "date_to": str(date_to),
-                        "destination": destination,
-                        "departure": departure,
-                        "arrival": arrival,
-                        "is_roundtrip": is_roundtrip,
-                        "amount": amount,
-                        "total": total,
-                        "car_name": car_name,
-                        "car_number": car_number,
-                        "transportation": transportation,
-                        "purpose": purpose,
-                        "allowance_day": allowance_day,
-                        "daily_allowance": daily_allowance,
-                        "accommodation_day": accommodation_day,
-                        "accommodation_fee": accommodation_fee,
-                        "uploaded_file": bool(uploaded_file),
-                    },
+                    value=form_data,
                 )
+                # DB に申請を保存
+                if approval_gateway:
+                    approval_gateway.add_submission(
+                        user_id=user,
+                        category="出張精算",
+                        data=form_data,
+                    )
             else:
                 action = ActionType.CANCEL.value
 
