@@ -31,6 +31,38 @@ def run_app():
     # --- サイドバー（設定入力） ---
     user_config = render_sidebar()
 
+    # --- UIモード変更時のセッション状態リセット ---
+    if (
+        smi.MODE in st.session_state
+        and st.session_state[smi.MODE] != user_config["mode"]
+    ):
+        # モードが変わったら、フォーム関連のセッション状態をクリア
+        keys_to_clear = [
+            smi.CATEGORY,
+            "loaded_submission",
+            "show_reject_reason",
+            "submission_success",
+        ]
+        for key in keys_to_clear:
+            if key in st.session_state:
+                del st.session_state[key]
+
+    # --- ユーザーID変更時のセッション状態リセット ---
+    if (
+        smi.USER_ID in st.session_state
+        and st.session_state[smi.USER_ID] != user_config["user_id"]
+    ):
+        # ユーザーが変わったら、タスク関連のセッション状態をクリア
+        keys_to_clear = [
+            smi.TASK_STARTED,
+            smi.CATEGORY,
+            "loaded_submission",
+            "submission_success",
+        ]
+        for key in keys_to_clear:
+            if key in st.session_state:
+                del st.session_state[key]
+
     # --- ゲートウェイ層を初期化 ---
     log_gateway = CSVLogRepository(log_path="data/logs.csv")
     approval_gateway = ApprovalRepository(db_path="data/approvals.db")
@@ -45,6 +77,10 @@ def run_app():
         st.session_state[smi.CONFIG] = config_usecase.load_config(
             user_config["user_id"]
         )
+    else:
+        # 固定UIの場合はCONFIGをクリア
+        if smi.CONFIG in st.session_state:
+            del st.session_state[smi.CONFIG]
 
     config = st.session_state.get(smi.CONFIG)
     if config:
@@ -66,10 +102,8 @@ def run_app():
 
         if st.button("タスク開始", disabled=not user_config["user_id"]):
             # --- セッション管理 ---
-            if smi.USER_ID not in st.session_state:
-                st.session_state[smi.USER_ID] = user_config["user_id"]
-            if smi.MODE not in st.session_state:
-                st.session_state[smi.MODE] = user_config["mode"]
+            st.session_state[smi.USER_ID] = user_config["user_id"]
+            st.session_state[smi.MODE] = user_config["mode"]
             # --- タスク開始処理 ---
             task_usecase.start_task()
 
