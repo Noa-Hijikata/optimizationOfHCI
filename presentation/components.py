@@ -156,12 +156,9 @@ def render_expense_form_trnsprts(task_usecase: ExpenseReport, approval_gateway=N
             key="amount",
         )
     with col25:
-        total = st.number_input(
-            "合計金額",
-            value=amount * (2 if is_roundtrip else 1),
-            disabled=True,
-            key="total",
-        )
+        # 預を考慈した合計金額を計算して表示
+        calculated_total = amount * (2 if is_roundtrip else 1)
+        st.metric("合計金額", f"¥{calculated_total:,}")
 
     col31, col32, col33, col34 = st.columns(4)
     with col31:
@@ -212,6 +209,8 @@ def render_expense_form_trnsprts(task_usecase: ExpenseReport, approval_gateway=N
     # submitted = st.form_submit_button("確定")
     bcols = st.columns(len(BUTTONS_BASE))
     pressed = None
+    # 合計金額を計算
+    calculated_total = amount * (2 if is_roundtrip else 1)
     form_data = {
         "user": user,
         "date": str(exdate),
@@ -220,7 +219,7 @@ def render_expense_form_trnsprts(task_usecase: ExpenseReport, approval_gateway=N
         "arrival": arrival,
         "is_roundtrip": is_roundtrip,
         "amount": amount,
-        "total": total,
+        "total": calculated_total,
         "car_name": car_name,
         "car_number": car_number,
         "transportation": transportation,
@@ -392,12 +391,9 @@ def render_expense_form_businessTrip(
             key="amount_trip",
         )
     with col25:
-        total = st.number_input(
-            "合計金額",
-            value=amount * (2 if is_roundtrip else 1),
-            disabled=True,
-            key="total_trip",
-        )
+        # 預を考慈した合計金額を計算して表示
+        calculated_total = amount * (2 if is_roundtrip else 1)
+        st.metric("合計金額", f"¥{calculated_total:,}")
 
     col31, col32, col33, col34 = st.columns(4)
     with col31:
@@ -480,6 +476,8 @@ def render_expense_form_businessTrip(
     # submitted = st.form_submit_button("確定")
     bcols = st.columns(len(BUTTONS_BASE))
     pressed = None
+    # 合計金額を計算
+    calculated_total = amount * (2 if is_roundtrip else 1)
     form_data = {
         "user": user,
         "date_from": str(date_from),
@@ -489,7 +487,7 @@ def render_expense_form_businessTrip(
         "arrival": arrival,
         "is_roundtrip": is_roundtrip,
         "amount": amount,
-        "total": total,
+        "total": calculated_total,
         "car_name": car_name,
         "car_number": car_number,
         "transportation": transportation,
