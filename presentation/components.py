@@ -257,6 +257,8 @@ def render_expense_form_trnsprts(task_usecase: ExpenseReport, approval_gateway=N
         #     category="交通費申請",
         #     action=pressed,
         # )
+        if lb == "確定":
+            st.session_state["submission_success"] = "交通費明細を申請しました"
         st.success(f"交通費明細を{pressed}しました。")
         st.session_state[smi.CATEGORY] = None
 
@@ -528,6 +530,8 @@ def render_expense_form_businessTrip(
         #     category="交通費申請",
         #     action=pressed,
         # )
+        if lb == "確定":
+            st.session_state["submission_success"] = "出張明細を申請しました"
         st.success(f"出張明細を{pressed}しました。")
         st.session_state[smi.CATEGORY] = None
 

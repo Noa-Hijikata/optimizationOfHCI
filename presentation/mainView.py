@@ -58,6 +58,12 @@ def run_app():
 
     with colA:
         st.subheader("新規申請")
+
+        # 申請完了メッセージを表示
+        if st.session_state.get("submission_success"):
+            st.success(st.session_state["submission_success"])
+            del st.session_state["submission_success"]
+
         if st.button("タスク開始", disabled=not user_config["user_id"]):
             # --- セッション管理 ---
             if smi.USER_ID not in st.session_state:
