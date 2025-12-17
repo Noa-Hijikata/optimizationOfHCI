@@ -1,44 +1,22 @@
-CAT_TRNSPORTS = "交通費精算"
-CAT_BUSINESS_TRIP = "出張精算"
+# 定数はpresentation/const.pyに統一されています
+# このファイルは後方互換性のためのエイリアスを提供します
 
-CATEGORIES = [
-    "出張申請",
-    CAT_BUSINESS_TRIP,
+from presentation.const import (
     CAT_TRNSPORTS,
-    "海外出張申請",
-    "海外出張精算",
-    "経費申請",
-    "経費精算",
-    "交際費申請",
-    "交際費精算",
-]
-BUTTONS_BASE = ["キャンセル", "確定"]
-TAX_OPTIONS = [0, 8, 10]
-PAYMENT_OPTIONS = ["立替", "社内精算", "カード"]
-TRANSPORTATION = [
-    "在来線（地下鉄含む）",
-    "新幹線・特急（ICカード連携）",
-    "新幹線・特急（WEB領収書又はEXご利用票）",
-    "新幹線・特急（紙領収証）",
-    "新幹線・特急（無効印チケット）",
-    "タクシー",
-    "タクシー（WEB領収書）",
-    "私有車ガソリン代",
-    "レンタカーガソリン代",
-    "レンタカー料金",
-    "カーシェアリング",
-    "高速道路料金（紙領収書）",
-    "高速道路りょうきん（ETC利用証明書）",
-    "駐車料",
-    "バス（高速バス除く）",
-    "高速バス",
-    "高速バス（ICカード決済）",
-    "高速バス（乗車証明書）",
-    "高速バス（WEB領収書）",
-    "船舶",
-    "日当",
-    "上記以外（規程に準じてやむを得ない場合のみ）",
-]
+    CAT_BUSINESS_TRIP,
+    CATEGORIES,
+    BUTTONS_BASE,
+    TAX_OPTIONS,
+    PAYMENT_OPTIONS,
+    TRANSPORTATION,
+)
 
-LOG_FILE = "logs.csv"
-CONFIG_DIR = "personalized"
+__all__ = [
+    "CAT_TRNSPORTS",
+    "CAT_BUSINESS_TRIP",
+    "CATEGORIES",
+    "BUTTONS_BASE",
+    "TAX_OPTIONS",
+    "PAYMENT_OPTIONS",
+    "TRANSPORTATION",
+]

@@ -4,7 +4,6 @@ import ast
 from presentation.const import (
     EventType,
     CATEGORIES,
-    BUTTONS_BASE,
     CAT_TRNSPORTS,
     CAT_BUSINESS_TRIP,
     SUGGESTS_TRNSPRTS,

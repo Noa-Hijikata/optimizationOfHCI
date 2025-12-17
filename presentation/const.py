@@ -32,6 +32,7 @@ class SessionManagementItems(Enum):
     CONFIG = "config"
 
 
+# カテゴリ定義
 CAT_TRNSPORTS = "交通費精算"
 CAT_BUSINESS_TRIP = "出張精算"
 
@@ -46,9 +47,13 @@ CATEGORIES = [
     "交際費申請",
     "交際費精算",
 ]
+
+# UI定数
 BUTTONS_BASE = ["キャンセル", "確定"]
 TAX_OPTIONS = [0, 8, 10]
 PAYMENT_OPTIONS = ["立替", "社内精算", "カード"]
+
+# 交通機関リスト
 TRANSPORTATION = [
     "在来線（地下鉄含む）",
     "新幹線・特急（ICカード連携）",
@@ -74,9 +79,7 @@ TRANSPORTATION = [
     "上記以外（規程に準じてやむを得ない場合のみ）",
 ]
 
-LOG_FILE = "logs.csv"
-CONFIG_DIR = "personalized"
-
+# サジェスト対象フィールド
 SUGGESTS_TRNSPRTS = [
     "destination",
     "departure",

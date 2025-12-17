@@ -33,9 +33,3 @@ class ExpenseReport:
             value,
             success,
         )
-
-    # def complete_task(self):
-    #     elapsed = time.time() - (self.start_time or time.time())
-    #     self.log_repo.save(self.events, elapsed)
-    #     self.start_time = None
-    #     return elapsed

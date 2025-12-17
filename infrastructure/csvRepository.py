@@ -3,10 +3,9 @@ import os
 import json
 from datetime import datetime
 from domain.Entity.logEvent import LogEvent
-from gateways.logGateway import LogGateway
 
 
-class CSVLogRepository(LogGateway):
+class CSVLogRepository:
 
     def __init__(self, log_path):
         self.log_path = log_path
