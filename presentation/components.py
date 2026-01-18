@@ -11,7 +11,7 @@ from presentation.const import (
 from domain.constants import TAX_OPTIONS, PAYMENT_OPTIONS, TRANSPORTATION, BUTTONS_BASE
 from usecases.expenseReport import ExpenseReport
 from usecases.aiAgent import AIAgent
-from utils.utils import safe_strftime
+from utils.utils import safe_strftime, parse_ai_response
 
 import time
 import dotenv
@@ -131,8 +131,6 @@ def del_form_key_session_state():
     for key in form_keys:
         if key in st.session_state:
             del st.session_state[key]
-
-    st.rerun()
 
 
 @st.dialog("💼 交通費申請", width="large", on_dismiss=del_form_key_session_state)
@@ -726,26 +724,42 @@ def render_ai_chat_panel(ai_agent: AIAgent, user_id, approval_gateway):
 
     if st.button("送信", key="ai_chat_send", use_container_width=True) and user_input:
         # ユーザーメッセージを履歴に追加
+        # 送信前の履歴を取得してAIに渡すことで、現在の入力に対するコンテキストとする
+        history = st.session_state["ai_chat_history"].copy()
         st.session_state["ai_chat_history"].append(
             {"role": "user", "message": user_input}
         )
 
         with st.spinner("AIが考え中..."):
-            intent_result = ai_agent.interpret_command(user_input)
+            # 1. 意図解釈
+            intent_result = ai_agent.interpret_command(user_input, history=history)
+            print("AI intent_result:", intent_result)
+            # 2. 検索と絞り込み
+            result = ai_agent.apply_intent(intent_result, user_id)
+            print("AI apply_intent result:", result)
 
-            st.session_state["ai_chat_history"].append(
-                {"role": "ai", "message": intent_result}
-            )
-
-            form_data_to_apply = ai_agent.apply_intent(intent_result, user_id)
-
-            if form_data_to_apply:
-                st.session_state["form_data_to_apply"] = form_data_to_apply
+            if result["status"] == "success":
+                # 1つに絞れた場合
+                st.session_state["ai_chat_history"].append(
+                    {
+                        "role": "ai",
+                        "message": "はい、ご指定の申請内容を見つけました。フォームに反映します。",
+                    }
+                )
+                st.session_state["form_data_to_apply"] = result["data"]
                 st.session_state["apply_ai_data"] = True
+            else:
+                # 絞れなかった場合、AIに聞き返させる
+                clarification = ai_agent.generate_clarification(
+                    user_input, history, result["status"], result.get("candidates")
+                )
+                st.session_state["ai_chat_history"].append(
+                    {"role": "ai", "message": clarification}
+                )
 
         try:
             # dump_session_state()
-            st.experimental_rerun()
+            st.rerun()
         except Exception:
             pass
 

@@ -17,7 +17,8 @@ import json
 from datetime import datetime, timedelta
 
 from infrastructure.csvRepository import CSVLogRepository
-from usecases.prompt import getPredictExpenseReportPrompt
+from usecases.prompt import getPredictExpenseReportPrompt, getRefinementPrompt
+from utils.utils import parse_ai_response
 
 from google import genai
 from dotenv import load_dotenv
@@ -47,7 +48,7 @@ class AIAgent:
         self._client_configured = False
         self._genai: genai.Client = None
 
-    def interpret_command(self, text: str) -> str:
+    def interpret_command(self, text: str, history: list = None) -> str:
         """ユーザの意図を解釈した結果を返す"""
         try:
             client = genai.Client(api_key=self.api_key)
@@ -57,7 +58,7 @@ class AIAgent:
             # CATEGORIES はリストとして定義されているため keys() ではなくイテレートする
             available_categories = ", ".join([f"'{cat}'" for cat in CATEGORIES])
 
-            prompt = getPredictExpenseReportPrompt(text, available_categories)
+            prompt = getPredictExpenseReportPrompt(text, available_categories, history)
             resp = client.models.generate_content(
                 model="gemini-3-flash-preview", contents=prompt
             )
@@ -85,100 +86,105 @@ class AIAgent:
             logger.exception("Failed to fetch recent submissions: %s", e)
             return None
 
-    def apply_intent(self, intent: Dict[str, Any], user_id: str) -> Dict[str, Any]:
-        """インテントを受けてサーバ側で行動を起こす（DB取得→フォームデータ返却）
-
-        対応するインテント:
-        - fetch_previous: 過去の申請データを取得（days_ago パラメータで日数指定）
-        - fetch_by_category: カテゴリで申請をフィルタリング
-        - set_amount: 金額を設定
+    def apply_intent(self, ai_resp: str, user_id: str) -> Dict[str, Any]:
+        """インテントを受けてサーバー側で検索を行う
 
         Returns:
-            form_data dict (possibly empty) to apply to the form.
+            {
+                "status": "success" | "multiple" | "not_found",
+                "data": Dict (1つに絞れた場合),
+                "candidates": List (複数ある場合),
+                "message": str
+            }
         """
-        intent_name = intent.get("intent")
-        data = {}
+        intent = parse_ai_response(ai_resp)
+        if not intent or intent.get("intent") == "unknown":
+            return {"status": "not_found", "message": "意図を解釈できませんでした。"}
 
-        # fetch_previous: 指定日数前の申請データを取得
-        if intent_name == "fetch_previous":
-            days_ago = intent.get("days_ago", 1)
-            data = self.fetch_recent_submission_by_days(user_id, days_ago=days_ago)
+        # 検索条件の組み立て
+        criteria = {
+            "days_ago": intent.get("days_ago"),
+            "category": intent.get("category"),
+            "destination": intent.get("destination"),
+            "amount": intent.get("amount"),
+        }
 
-            # フィルタリング（カテゴリ指定がある場合）
-            if data and "category" in intent:
-                target_category = intent.get("category")
-                # data に複数のカテゴリがある場合、指定カテゴリのみを抽出
-                if isinstance(data, dict):
-                    filtered = {
-                        k: v
-                        for k, v in data.items()
-                        if self._matches_category(k, target_category)
-                    }
-                    data = filtered if filtered else data
+        matches = self.search_submissions(user_id, criteria)
 
-            # 金額を上書き（金額指定がある場合）
-            if data and "amount" in intent:
-                data["amount"] = intent.get("amount")
+        if len(matches) == 1:
+            data = matches[0]
+            # 不要なキーを削除
+            for key in ["user", "date", "uploaded_file"]:
+                if key in data:
+                    del data[key]
+            return {"status": "success", "data": data}
 
-            logger.info(
-                "Applied fetch_previous intent with days_ago=%d, result=%s",
-                days_ago,
-                data,
-            )
-            # return data or {}
+        elif len(matches) > 1:
+            return {"status": "multiple", "candidates": matches}
 
-        # fetch_by_category: カテゴリで最近の申請をフィルタリング
-        elif intent_name == "fetch_previous_by_category":
-            category = intent.get("category")
-            data = self.fetch_recent_submission(user_id, limit=5)
-            if data and category:
-                filtered = {
-                    k: v for k, v in data.items() if self._matches_category(k, category)
-                }
-                data = filtered if filtered else data
-            logger.info(
-                "Applied fetch_by_category intent with category=%s, result=%s",
-                category,
-                data,
-            )
-            return data or {}
-
-        elif intent_name == "fetch_previous_by_destination":
-            destination = intent.get("destination")
-            days_ago = intent.get("days_ago")
-            data = self.fetch_recent_submission_by_days(user_id, days_ago=days_ago)
-            if data and destination:
-                filtered = {
-                    k: v
-                    for k, v in data.items()
-                    if isinstance(v, str) and re.search(destination, v, re.IGNORECASE)
-                }
-                data = filtered if filtered else data
-            logger.info(
-                "Applied fetch_by_destination intent with destination=%s, days_ago=%d, result=%s",
-                destination,
-                days_ago,
-                data,
-            )
-            return data or {}
-
-        # set_amount: 金額のみを設定
-        elif intent_name == "set_amount":
-            amount = intent.get("amount")
-            logger.info("Applying set_amount intent with amount=%s", amount)
-            return {"amount": amount}
-
-        # unknown / fallback
         else:
-            logger.info("Unknown intent, returning empty dict")
-            return {}
+            return {"status": "not_found"}
 
-        if data and "date" in data:
-            del data["user"]
-            del data["date"]  # 日付は現在日付を使う想定
-            del data["uploaded_file"]
+    def search_submissions(self, user_id: str, criteria: Dict[str, Any]) -> list:
+        """条件に合致する申請をすべて検索する"""
+        all_subs = self.log_repo.get_recent_submissions(user_id, limit=20)
+        matches = []
 
-        return data
+        days_ago = criteria.get("days_ago")
+        category = criteria.get("category")
+        destination = criteria.get("destination")
+        amount = criteria.get("amount")
+
+        for sub in all_subs:
+            sub_data = sub.get("data", {})
+            sub_ts = sub.get("timestamp", 0)
+
+            # 日付フィルタ
+            if days_ago is not None:
+                target_ts = datetime.now().timestamp() - (days_ago * 86400)
+                if abs(sub_ts - target_ts) > 43200:  # 12時間の猶予
+                    continue
+
+            # カテゴリフィルタ
+            if category:
+                if not (
+                    self._matches_category(sub.get("category", ""), category)
+                    or any(self._matches_category(k, category) for k in sub_data.keys())
+                ):
+                    continue
+
+            # 目的地フィルタ
+            if destination:
+                target_str = (
+                    str(sub_data.get("destination", ""))
+                    + str(sub_data.get("arrival", ""))
+                    + str(sub_data.get("departure", ""))
+                ).lower()
+                if destination.lower() not in target_str:
+                    continue
+
+            # 金額フィルタ
+            if amount is not None:
+                if sub_data.get("amount") != amount and sub_data.get("total") != amount:
+                    continue
+
+            matches.append(sub_data)
+        return matches
+
+    def generate_clarification(
+        self, user_input: str, history: list, status: str, candidates: list = None
+    ) -> str:
+        """ユーザーに聞き返すための文言を生成する"""
+        try:
+            client = genai.Client(api_key=self.api_key)
+            prompt = getRefinementPrompt(user_input, history, status, candidates)
+            resp = client.models.generate_content(
+                model="gemini-3-flash-preview", contents=prompt
+            )
+            return resp.text
+        except Exception as e:
+            logger.exception("Failed to generate clarification: %s", e)
+            return "すみません、条件に合う申請を絞り込めませんでした。もう少し詳しく教えていただけますか？"
 
     def fetch_recent_submission_by_days(
         self, user_id: str, days_ago: int = 1, limit: int = 5
