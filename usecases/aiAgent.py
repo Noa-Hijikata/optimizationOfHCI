@@ -66,7 +66,8 @@ class AIAgent:
 
         except Exception as e:
             logger.exception("AI client configuration failed: %s", e)
-            return "(AI error) 応答を取得できませんでした。", e
+            # タプルではなく、エラーメッセージ文字列のみを返すように修正
+            return f"(AI error) 応答を取得できませんでした: {str(e)}"
 
     def fetch_recent_submission(
         self, user_id: str, limit: int = 5
@@ -100,6 +101,21 @@ class AIAgent:
         intent = parse_ai_response(ai_resp)
         if not intent or intent.get("intent") == "unknown":
             return {"status": "not_found", "message": "意図を解釈できませんでした。"}
+
+        # suggest_new: AIによる新規申請内容の提案
+        if intent.get("intent") == "suggest_new":
+            data = intent.get("data", {})
+            category = intent.get("category", "交通費精算")
+            # 必要なデフォルト値を補完
+            if "total" not in data and "amount" in data:
+                data["total"] = data["amount"]
+
+            return {
+                "status": "success",
+                "data": data,
+                "category": category,  # 修正: カテゴリも返すようにする
+                "message": f"内容を推測しました。フォームをご確認ください。",
+            }
 
         # 検索条件の組み立て
         criteria = {

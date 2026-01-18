@@ -15,16 +15,20 @@ def getPredictExpenseReportPrompt(
             {history_context}
             最新のユーザー入力テキスト「{text}」を解析し、経費申請に関する意図 (intent) と、関連するパラメータをJSON形式で抽出してください。
             過去の対話履歴がある場合は、その文脈（目的地や金額など）も考慮して推測してください。
+            利用可能なカテゴリ一覧: {available_categories}
             利用可能なインテント:
-            - 'fetch_previous': 過去の申請データを取得したい場合。days_ago (int): 何日前か。例: '昨日'->1, '先週'->7, '先月'->30。
-            - 'fetch_previous_by_category': 特定のカテゴリの申請データを取得したい場合。category (str): 以下のいずれかのカテゴリ名: {available_categories}。
-            - 'fetch_previous_by_destination': 特定の目的地の申請データを取得したい場合。destination (str): 目的地はどこか。例: '東京', '大阪'。
-            - 'set_amount': 金額を設定したい場合。amount (int): 金額。
-            - 'unknown': 上記に該当しない場合。
+            - 'fetch_previous': 過去の申請データを取得したい場合。
+            - 'fetch_previous_by_category': 特定のカテゴリの申請データを取得したい場合。
+            - 'fetch_previous_by_destination': 特定の目的地の申請データを取得したい場合。
+            - 'suggest_new': 新しい申請内容を提案してほしい場合（ユーザーが「〜へ行った」「〜の申請をしたい」と言った時）。
+            - 'set_amount': 金額を設定したい場合。
 
-            抽出するJSONの構造:
-            {{"intent": "<intent_name>", "days_ago": <int>, "category": "<category_name>", "destination": "<destination_name>", "amount": <int>}}
-            days_ago, category, destination, amount は関連するインテントの場合のみ含めてください。金額は数字のみ抽出してください。
+            金額推測のルール:
+            - 'suggest_new' の際、departure (出発地) と arrival (到着地) が判明していて金額が不明な場合、一般的な公共交通機関や高速料金を考慮したもっともらしい金額（円単位）を推測して amount に含めてください。
+            - 不明な項目（car_name, purpose など）は無理に埋めず空のままにしてください。
+
+            抽出するJSONの構造（suggest_newの場合）:
+            {{"intent": "suggest_new", "category": "交通費精算"|"出張精算", "data": {{"destination": "...", "departure": "...", "arrival": "...", "amount": <int>, "purpose": "...", "transportation": "..."}}}}
 
             例:
             ユーザー: 「昨日と同じ内容で」
@@ -41,6 +45,9 @@ def getPredictExpenseReportPrompt(
 
             ユーザー: 「今週のランチ代」
             AI: {{"intent": "fetch_previous_by_category", "category": "meal", "days_ago": 7}}
+            
+            ユーザー: 「明日は大阪へ出張します。新幹線で行きます。」
+            AI: {{"intent": "suggest_new", "category": "出張精算", "data": {{"destination": "大阪", "departure": "東京", "arrival": "新大阪", "amount": 14500, "purpose": "出張", "transportation": "公共交通機関"}}}}
             
             ユーザー: 「こんにちは」
             AI: {{"intent": "more_info_needed"}}

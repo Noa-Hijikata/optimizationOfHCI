@@ -646,41 +646,6 @@ def render_summary(category_order, button_order, config, mode):
 
     st.markdown("<div id='right-summary'>", unsafe_allow_html=True)
 
-    st.markdown(
-        "<h3 style='color: #2E86AB; text-align: center;'>📊 申請サマリ</h3>",
-        unsafe_allow_html=True,
-    )
-
-    # カテゴリ順
-    st.markdown(
-        "<div style='background: #2E86AB11; padding: 12px; border-radius: 8px; margin-bottom: 10px;'>",
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        "<span style='color: #2E86AB; font-weight: bold;'>🗂️ カテゴリ順</span>",
-        unsafe_allow_html=True,
-    )
-    try:
-        st.caption(" > ".join(category_order))
-    except Exception:
-        st.caption(str(category_order))
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    # ボタン順
-    st.markdown(
-        "<div style='background: #A23B7211; padding: 12px; border-radius: 8px; margin-bottom: 10px;'>",
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        "<span style='color: #A23B72; font-weight: bold;'>🔘 ボタン順</span>",
-        unsafe_allow_html=True,
-    )
-    try:
-        st.caption(" > ".join(button_order))
-    except Exception:
-        st.caption(str(button_order))
-    st.markdown("</div>", unsafe_allow_html=True)
-
     if config:
         st.markdown(
             "<div style='background: linear-gradient(90deg, #06A77D22, #06A77D44); padding: 12px; border-radius: 8px; border-left: 4px solid #06A77D;'>✅ 個別化設定を適用中</div>",
@@ -712,7 +677,7 @@ def render_ai_chat_panel(ai_agent: AIAgent, user_id, approval_gateway):
         if chat["role"] == "user":
             st.markdown(f"**あなた:** {chat['message']}")
         else:
-            st.markdown(f"**AI:** {chat['message']}")
+            st.markdown(f"**アシスタント:** {chat['message']}")
 
     # ユーザー入力
     user_input = st.text_input(
@@ -733,18 +698,29 @@ def render_ai_chat_panel(ai_agent: AIAgent, user_id, approval_gateway):
         with st.spinner("AIが考え中..."):
             # 1. 意図解釈
             intent_result = ai_agent.interpret_command(user_input, history=history)
+
+            # エラーが発生した場合は履歴に表示して終了
+            if isinstance(intent_result, str) and intent_result.startswith(
+                "(AI error)"
+            ):
+                st.session_state["ai_chat_history"].append(
+                    {"role": "ai", "message": intent_result}
+                )
+                st.rerun()
+
             print("AI intent_result:", intent_result)
-            # 2. 検索と絞り込み
+
+            # 2. 検索と絞り込み or 新規提案
             result = ai_agent.apply_intent(intent_result, user_id)
-            print("AI apply_intent result:", result)
 
             if result["status"] == "success":
-                # 1つに絞れた場合
+                # AIがカテゴリを特定している場合は反映
+                if "category" in result:
+                    st.session_state[smi.CATEGORY] = result["category"]
+
+                msg = result.get("message", "内容をフォームに反映しました。")
                 st.session_state["ai_chat_history"].append(
-                    {
-                        "role": "ai",
-                        "message": "はい、ご指定の申請内容を見つけました。フォームに反映します。",
-                    }
+                    {"role": "ai", "message": msg}
                 )
                 st.session_state["form_data_to_apply"] = result["data"]
                 st.session_state["apply_ai_data"] = True
