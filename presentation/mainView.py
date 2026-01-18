@@ -4,6 +4,11 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import streamlit as st
+import dotenv  # dotenv をインポート
+import logging
+
+# .env ファイルをロード
+dotenv.load_dotenv()
 
 from presentation.const import (
     UIMode,
@@ -19,16 +24,36 @@ from presentation.components import (
     render_summary,
     render_expense_form_trnsprts,
     render_expense_form_businessTrip,
+    render_ai_chat_panel,  # AIチャット右パネルをインポート
 )
 from usecases.expenseReport import ExpenseReport
 from usecases.personalization import Personalization
 from usecases.logging import Logging
+from usecases.aiAgent import AIAgent  # AI Agent をインポート
+
+import logging
+from logging.handlers import RotatingFileHandler
+
+os.makedirs("logs", exist_ok=True)
+handler = RotatingFileHandler(
+    "logs/app.log", maxBytes=5 * 1024 * 1024, backupCount=3, encoding="utf-8"
+)
+formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s - %(message)s")
+handler.setFormatter(formatter)
+root = logging.getLogger()
+root.setLevel(logging.INFO)
+root.addHandler(handler)
+# 既にストリームハンドラが無ければ標準出力にも出す
+if not any(isinstance(h, logging.StreamHandler) for h in root.handlers):
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(formatter)
+    root.addHandler(stream_handler)
 
 
 def run_app():
     st.set_page_config(page_title="経費精算 実験", layout="wide")
 
-    # --- カスタムスタイル ---
+    # region --- カスタムスタイル ---
     st.markdown(
         """
         <style>
@@ -165,11 +190,34 @@ def run_app():
     """,
         unsafe_allow_html=True,
     )
+    # endregion
 
     # --- サイドバー（設定入力） ---
     user_config = render_sidebar()
 
-    # --- UIモード変更時のセッション状態リセット ---
+    # region --- 開発用デバッグ表示（セッション状態の主要キーを常に可視化） ---
+    # with st.expander("🔧 Dev: session_state snapshot (debug)", expanded=True):
+    #     keys = [
+    #         "form_data_to_apply",
+    #         "ai_chat_history",
+    #         "ai_chat_input",
+    #         "ai_last_error",
+    #         "loaded_submission",
+    #         "apply_ai_data",
+    #         smi.USER_ID,
+    #         smi.MODE,
+    #         smi.TASK_STARTED,
+    #         smi.CATEGORY,
+    #     ]
+    #     for k in keys:
+    #         try:
+    #             val = st.session_state.get(k, None)
+    #         except Exception:
+    #             val = "<unreadable>"
+    #         st.write(f"{k}:", val)
+    # endregion
+
+    # region --- UIモード変更時のセッション状態リセット ---
     if (
         smi.MODE in st.session_state
         and st.session_state[smi.MODE] != user_config["mode"]
@@ -184,8 +232,9 @@ def run_app():
         for key in keys_to_clear:
             if key in st.session_state:
                 del st.session_state[key]
+    # endregion
 
-    # --- ユーザーID変更時のセッション状態リセット ---
+    # region --- ユーザーID変更時のセッション状態リセット ---
     if (
         smi.USER_ID in st.session_state
         and st.session_state[smi.USER_ID] != user_config["user_id"]
@@ -200,17 +249,20 @@ def run_app():
         for key in keys_to_clear:
             if key in st.session_state:
                 del st.session_state[key]
+    # endregion
 
-    # --- ゲートウェイ層を初期化 ---
+    # region --- ゲートウェイ層を初期化 ---
     log_gateway = CSVLogRepository(log_path="data/logs.csv")
     approval_gateway = ApprovalRepository(db_path="data/approvals.db")
+    # endregion
 
-    # --- ユースケース層を初期化 ---
+    # region --- ユースケース層を初期化 ---
     log_usecase = Logging(log_gateway)
     config_usecase = Personalization(config_dir="personalized")
     task_usecase = ExpenseReport(log_usecase)
+    # endregion
 
-    # --- パーソナライズ設定読込 ---
+    # region --- パーソナライズ設定読込 ---
     if user_config["mode"] == UIMode.PERSONALIZE.value and user_config["user_id"]:
         st.session_state[smi.CONFIG] = config_usecase.load_config(
             user_config["user_id"]
@@ -225,11 +277,12 @@ def run_app():
         category_order = config.get("category_order", CATEGORIES)
     else:
         category_order = CATEGORIES
+    # endregion
 
-    # --- メインUI ---
+    # region --- メインUI ---
     st.title("💼 経費精算システム（実験用）")
 
-    # モード表示
+    # region モード表示
     if user_config["mode"] == UIMode.PERSONALIZE.value:
         mode_badge = "🎨 パーソナライズUI"
         mode_color = "#A23B72"
@@ -241,10 +294,13 @@ def run_app():
         f"<div style='text-align: center; padding: 10px; background: linear-gradient(90deg, {mode_color}22, {mode_color}44); border-radius: 8px; margin-bottom: 20px;'><span style='color: {mode_color}; font-weight: bold;'>{mode_badge}</span></div>",
         unsafe_allow_html=True,
     )
+    # endregion
 
     colA, colB = st.columns([5, 2])
 
     with colA:
+
+        # region --- 新規申請 ---
         st.subheader("📝 新規申請")
 
         # 申請完了メッセージを表示
@@ -297,12 +353,104 @@ def run_app():
                         )
 
         if st.session_state.get(smi.CATEGORY) == CAT_TRNSPORTS:
+            # デバッグ: ユーザー操作でモーダルが開くか確認するための手動ボタン
+            if st.button(
+                "🔧 Dev: モーダルを手動で開く（交通費）", key="dev_open_trnsprts"
+            ):
+                render_expense_form_trnsprts(task_usecase, approval_gateway)
+            # 通常は自動で開く想定だが、環境によってはユーザー操作が必要なため手動ボタンも用意
             render_expense_form_trnsprts(task_usecase, approval_gateway)
+            # ---------- デバッグ: インラインでフォームを表示して値が反映されるか確認 ----------
+            if st.button(
+                "🔧 Dev: インラインで交通フォームを表示",
+                key="dev_inline_trnsprts_toggle",
+            ):
+                st.session_state["dev_show_inline_trnsprts"] = not st.session_state.get(
+                    "dev_show_inline_trnsprts", False
+                )
 
+            if st.session_state.get("dev_show_inline_trnsprts"):
+                with st.expander("Dev: Inline Transport Form (debug)", expanded=True):
+                    ld = st.session_state.get("loaded_submission", {}) or {}
+                    d_col1, d_col2, d_col3 = st.columns(3)
+                    with d_col1:
+                        st.text_input(
+                            "👤 申請者 (dev)", value=ld.get("user", ""), key="dev_user"
+                        )
+                        st.date_input(
+                            "📅 日付 (dev)", value=ld.get("date", ""), key="dev_date"
+                        )
+                        st.text_input(
+                            "🎯 目的地 (dev)",
+                            value=ld.get("destination", ""),
+                            key="dev_destination",
+                        )
+                    with d_col2:
+                        st.text_input(
+                            "📍 出発 (dev)",
+                            value=ld.get("departure", ""),
+                            key="dev_departure",
+                        )
+                        st.text_input(
+                            "🏁 到着 (dev)",
+                            value=ld.get("arrival", ""),
+                            key="dev_arrival",
+                        )
+                        st.checkbox(
+                            "🔄 往復 (dev)",
+                            value=ld.get("is_roundtrip", False),
+                            key="dev_is_roundtrip",
+                        )
+                    with d_col3:
+                        st.number_input(
+                            "💰 金額 (dev)", value=ld.get("amount", 0), key="dev_amount"
+                        )
+                        st.text_input(
+                            "🚗 車名 (dev)",
+                            value=ld.get("car_name", ""),
+                            key="dev_car_name",
+                        )
+                        st.text_input(
+                            "🔢 ナンバー (dev)",
+                            value=ld.get("car_number", ""),
+                            key="dev_car_number",
+                        )
+
+                    if st.button(
+                        "Dev: 適用してウィジェットに反映",
+                        key="dev_apply_inline_trnsprts",
+                    ):
+                        # コピーして通常のウィジェットキーへ反映させる
+                        mapping = {
+                            "user": "dev_user",
+                            "date": "dev_date",
+                            "destination": "dev_destination",
+                            "departure": "dev_departure",
+                            "arrival": "dev_arrival",
+                            "is_roundtrip": "dev_is_roundtrip",
+                            "amount": "dev_amount",
+                            "car_name": "dev_car_name",
+                            "car_number": "dev_car_number",
+                        }
+                        for dst, src in mapping.items():
+                            st.session_state[dst] = st.session_state.get(src)
+
+                        st.success(
+                            "Dev: 値をウィジェットに反映しました（次回レンダリングで表示されます）"
+                        )
+                        st.session_state["apply_ai_data"] = False
+                        st.session_state["loaded_submission"] = ld
+                        st.experimental_rerun()
         if st.session_state.get(smi.CATEGORY) == CAT_BUSINESS_TRIP:
+            if st.button(
+                "🔧 Dev: モーダルを手動で開く（出張）", key="dev_open_business"
+            ):
+                render_expense_form_businessTrip(task_usecase, approval_gateway)
             render_expense_form_businessTrip(task_usecase, approval_gateway)
 
-        # --- 最近の申請履歴セクション（パーソナライズUIのみ） ---
+        # endregion
+
+        # region --- 最近の申請履歴セクション（パーソナライズUIのみ） ---
         if user_config["mode"] == UIMode.PERSONALIZE.value:
             st.divider()
             st.subheader("📚 最近の申請")
@@ -387,9 +535,107 @@ def run_app():
                     "<div style='background: #F1800122; padding: 15px; border-radius: 8px; border-left: 4px solid #F18F01;'>ℹ️ ユーザーIDを入力して開始してください</div>",
                     unsafe_allow_html=True,
                 )
-
+        # endregion
     with colB:
+        # 右側サマリを表示
         render_summary(category_order, BUTTONS_BASE, config, user_config["mode"])
+
+        # region --- AI チャットパネル表示 ---
+        # パーソナライズUI のときは右カラム内に AI チャットを表示
+        if user_config["mode"] == UIMode.PERSONALIZE.value:
+            try:
+                ai_agent = AIAgent()
+                render_ai_chat_panel(
+                    ai_agent, user_config.get("user_id", ""), approval_gateway
+                )
+            except Exception as e:
+                # AI 初期化に失敗してもメイン処理は継続
+                logger = logging.getLogger(__name__)
+                logger.warning("AI panel initialization failed: %s", e)
+        # endregion
+    # endregion
+
+    # region --- AI からの適用要求があればセッションにデータを反映して再実行 ---
+    if st.session_state.get("apply_ai_data"):
+        form_data = st.session_state.get("form_data_to_apply", {}) or {}
+        # マージ: 既存の読み込みデータに追記/上書き
+        existing = st.session_state.get("loaded_submission", {}) or {}
+        merged = {**existing, **form_data}
+        st.session_state["loaded_submission"] = merged
+
+        # 便利のため、フォームの個別フィールドにもコピー（ウィジェットの value に反映される）
+        for k, v in merged.items():
+            # widget keys are expected to match these field names in forms
+            st.session_state[k] = v
+            logging.info(f"Applied AI data to session_state: {k} = {v}")
+
+        # AI がカテゴリを返していれば、そのカテゴリを選択してモーダルを開く
+        ai_category = form_data.get("category")
+
+        # AI が返すカテゴリ名は英語や短縮形の場合があるため、アプリ内のカテゴリ名へマッピングする
+        def _map_ai_category(cat):
+            if not cat:
+                return None
+            c = str(cat).strip().lower()
+            mapping = {
+                # English -> アプリ内カテゴリ
+                "transportation": CAT_TRNSPORTS,
+                "transport": CAT_TRNSPORTS,
+                "trnsprts": CAT_TRNSPORTS,
+                "交通費": CAT_TRNSPORTS,
+                "交通": CAT_TRNSPORTS,
+                "taxi": CAT_TRNSPORTS,
+                "train": CAT_TRNSPORTS,
+                "business": CAT_BUSINESS_TRIP,
+                "business_trip": CAT_BUSINESS_TRIP,
+                "出張": CAT_BUSINESS_TRIP,
+                "出張精算": CAT_BUSINESS_TRIP,
+                "出張申請": CAT_BUSINESS_TRIP,
+            }
+            return mapping.get(c)
+
+        mapped = _map_ai_category(ai_category)
+        if mapped:
+            st.session_state[smi.CATEGORY] = mapped
+            st.session_state[smi.TASK_STARTED] = True
+        else:
+            # AIがカテゴリを返していない場合は、返された form_data のキーから推論を試みる
+            inferred = None
+            if isinstance(form_data, dict):
+                # 出張っぽいフィールドがあれば出張モーダルを開く
+                if any(
+                    k in form_data
+                    for k in (
+                        "date_from",
+                        "date_to",
+                        "allowance_day",
+                        "accommodation_fee",
+                    )
+                ):
+                    inferred = CAT_BUSINESS_TRIP
+                # 交通費っぽいフィールドがあれば交通費モーダルを開く
+                elif any(
+                    k in form_data
+                    for k in (
+                        "destination",
+                        "departure",
+                        "arrival",
+                        "car_name",
+                        "transportation",
+                    )
+                ):
+                    inferred = CAT_TRNSPORTS
+
+            if inferred:
+                st.session_state[smi.CATEGORY] = inferred
+                st.session_state[smi.TASK_STARTED] = True
+
+        # フラグをクリアして再実行させる（ウィジェットは次のレンダリングで session_state から値を読む）
+        st.session_state["apply_ai_data"] = False
+        # optionally clear the stored form_data
+        # st.session_state.pop("form_data_to_apply", None)
+        st.rerun()
+    # endregion
 
 
 if __name__ == "__main__":

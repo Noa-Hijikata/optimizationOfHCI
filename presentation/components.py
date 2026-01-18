@@ -1,6 +1,6 @@
 import streamlit as st
 
-from datetime import date
+import datetime
 
 from presentation.const import (
     EventType,
@@ -10,6 +10,12 @@ from presentation.const import (
 )
 from domain.constants import TAX_OPTIONS, PAYMENT_OPTIONS, TRANSPORTATION, BUTTONS_BASE
 from usecases.expenseReport import ExpenseReport
+from usecases.aiAgent import AIAgent
+from utils.utils import safe_strftime
+
+import time
+import dotenv
+import logging
 
 
 def update_value(key, value):
@@ -18,7 +24,7 @@ def update_value(key, value):
 
 
 def render_suggest_input(
-    label, options, key_prefix, initial_value="", enable_suggest=True
+    label, options, initial_value, key_prefix, enable_suggest=True
 ):
     """
     軽量なサジェスト付き入力フィールド。
@@ -29,13 +35,14 @@ def render_suggest_input(
         label: フィールドラベル
         options: 候補オプションのリスト
         key_prefix: Streamlit のウィジェットキー
-        initial_value: 初期値
         enable_suggest: サジェスト機能を有効にするかどうか（固定UIの場合はFalse）
     """
     options = options or []
 
-    # テキスト入力フィールド
-    val = st.text_input(label, value=initial_value, key=key_prefix)
+    # セッションに既存値があれば壊さず、存在しなければ初期値をセット
+    st.session_state.setdefault(key_prefix, initial_value)
+    # ウィジェットは key のみ渡す（value を毎回渡すと警告になる）
+    val = st.text_input(label, key=key_prefix)
 
     # サジェスト機能が有効の場合のみ候補を表示
     if not enable_suggest:
@@ -76,7 +83,59 @@ def render_suggest_input(
     return val
 
 
-@st.dialog("💼 交通費申請", width="large")
+def del_form_key_session_state():
+    print("del_form_key_session_state called")
+    """フォーム関連のキーをすべてクリア"""
+    form_keys = [
+        "date",
+        "destination",
+        "destination_selected",
+        "departure",
+        "departure_selected",
+        "arrival",
+        "arrival_selected",
+        "is_roundtrip",
+        "amount",
+        "total",
+        "car_name",
+        "car_name_selected",
+        "car_number",
+        "car_number_selected",
+        "transportation",
+        "purpose",
+        "purpose_selected",
+        "uploaded_file",
+        "loaded_submission",
+        "date_from",
+        "date_to",
+        "destination_trip",
+        "departure_trip",
+        "arrival_trip",
+        "is_roundtrip_trip",
+        "amount_trip",
+        "total_trip",
+        "car_name_trip",
+        "car_number_trip",
+        "transportation_trip",
+        "purpose_trip",
+        "allowance_day",
+        "daily_allowance",
+        "accommodation_day",
+        "accommodation_fee",
+        "uploaded_file_trip",
+        "loaded_submission",
+        "form_data_to_apply",
+        "apply_ai_data",
+        smi.CATEGORY,
+    ]
+    for key in form_keys:
+        if key in st.session_state:
+            del st.session_state[key]
+
+    st.rerun()
+
+
+@st.dialog("💼 交通費申請", width="large", on_dismiss=del_form_key_session_state)
 def render_expense_form_trnsprts(task_usecase: ExpenseReport, approval_gateway=None):
     """交通費申請フォームUI"""
     st.markdown(
@@ -105,21 +164,14 @@ def render_expense_form_trnsprts(task_usecase: ExpenseReport, approval_gateway=N
             key="user",
         )
     with col12:
-        from datetime import datetime
-
-        date_value = date.today()
-        if loaded_data.get("date"):
-            try:
-                date_value = datetime.strptime(loaded_data["date"], "%Y-%m-%d").date()
-            except:
-                pass
-        exdate = st.date_input("📅 日付", value=date_value, key="date")
+        exdate = st.date_input("📅 日付", key="date")
     with col13:
+
         destination = render_suggest_input(
-            "🎯 目的地",
-            suggests.get("destination", []),
-            "destination",
+            label="🎯 目的地",
+            options=suggests.get("destination", []),
             initial_value=loaded_data.get("destination", ""),
+            key_prefix="destination",
             enable_suggest=enable_suggest,
         )
 
@@ -131,24 +183,23 @@ def render_expense_form_trnsprts(task_usecase: ExpenseReport, approval_gateway=N
     col21, col22, col23 = st.columns(3)
     with col21:
         departure = render_suggest_input(
-            "📍 出発",
-            suggests.get("departure", []),
-            "departure",
+            label="📍 出発",
+            options=suggests.get("departure", []),
             initial_value=loaded_data.get("departure", ""),
+            key_prefix="departure",
             enable_suggest=enable_suggest,
         )
     with col22:
         arrival = render_suggest_input(
-            "🏁 到着",
-            suggests.get("arrival", []),
-            "arrival",
+            label="🏁 到着",
+            options=suggests.get("arrival", []),
+            key_prefix="arrival",
             initial_value=loaded_data.get("arrival", ""),
             enable_suggest=enable_suggest,
         )
     with col23:
-        is_roundtrip = st.checkbox(
-            "🔄 往復", value=loaded_data.get("is_roundtrip", False), key="is_roundtrip"
-        )
+
+        is_roundtrip = st.checkbox("🔄 往復", key="is_roundtrip")
 
     # 金額情報セクション
     st.markdown(
@@ -157,11 +208,11 @@ def render_expense_form_trnsprts(task_usecase: ExpenseReport, approval_gateway=N
     )
     col_amount_l, col_amount_r = st.columns(2)
     with col_amount_l:
+        st.session_state.setdefault("amount", loaded_data.get("amount", 0))
         amount = st.number_input(
             "💰 金額",
             min_value=0,
             step=100,
-            value=loaded_data.get("amount", 0),
             key="amount",
         )
     with col_amount_r:
@@ -176,19 +227,21 @@ def render_expense_form_trnsprts(task_usecase: ExpenseReport, approval_gateway=N
     )
     col31, col32, col33, col34 = st.columns(4)
     with col31:
+
         car_name = render_suggest_input(
-            "🚗 車名",
-            suggests.get("car_name", []),
-            "car_name",
+            label="🚗 車名",
+            options=suggests.get("car_name", []),
             initial_value=loaded_data.get("car_name", ""),
+            key_prefix="car_name",
             enable_suggest=enable_suggest,
         )
     with col32:
+
         car_number = render_suggest_input(
             "🔢 ナンバー",
-            suggests.get("car_number", []),
-            "car_number",
+            options=suggests.get("car_number", []),
             initial_value=loaded_data.get("car_number", ""),
+            key_prefix="car_number",
             enable_suggest=enable_suggest,
         )
     with col33:
@@ -217,11 +270,12 @@ def render_expense_form_trnsprts(task_usecase: ExpenseReport, approval_gateway=N
         "<div style='background: #F1800111; padding: 12px; border-radius: 8px; margin: 15px 0;'><span style='color: #F18F01; font-weight: bold;'>📝 備考</span></div>",
         unsafe_allow_html=True,
     )
+
     purpose = render_suggest_input(
-        "交通目的",
-        suggests.get("purpose", []),
-        "purpose",
+        label="交通目的",
+        options=suggests.get("purpose", []),
         initial_value=loaded_data.get("purpose", ""),
+        key_prefix="purpose",
         enable_suggest=enable_suggest,
     )
 
@@ -276,38 +330,12 @@ def render_expense_form_trnsprts(task_usecase: ExpenseReport, approval_gateway=N
             st.success(f"交通費明細を{lb}しました。")
             st.session_state[smi.CATEGORY] = None
 
-            # キャンセル時はセッション状態をクリアして次回は空白状態にする
-            if lb == "キャンセル":
-                # フォーム関連のキーをすべてクリア
-                form_keys = [
-                    "date",
-                    "destination",
-                    "destination_selected",
-                    "departure",
-                    "departure_selected",
-                    "arrival",
-                    "arrival_selected",
-                    "is_roundtrip",
-                    "amount",
-                    "total",
-                    "car_name",
-                    "car_name_selected",
-                    "car_number",
-                    "car_number_selected",
-                    "transportation",
-                    "purpose",
-                    "purpose_selected",
-                    "uploaded_file",
-                    "loaded_submission",
-                ]
-                for key in form_keys:
-                    if key in st.session_state:
-                        del st.session_state[key]
-
+            # フォームキーをセッション状態から削除するユーティリティ関数を呼び出す
+            del_form_key_session_state()
             st.rerun()
 
 
-@st.dialog("✈️ 出張費申請", width="large")
+@st.dialog("✈️ 出張費申請", width="large", on_dismiss=del_form_key_session_state)
 def render_expense_form_businessTrip(
     task_usecase: ExpenseReport, approval_gateway=None
 ):
@@ -338,42 +366,23 @@ def render_expense_form_businessTrip(
             key="user",
         )
     with col12:
-        from datetime import datetime
-
-        date_from_value = date.today()
-        if loaded_data.get("date_from"):
-            try:
-                date_from_value = datetime.strptime(
-                    loaded_data["date_from"], "%Y-%m-%d"
-                ).date()
-            except:
-                pass
         date_from = st.date_input(
             "📅 出張日（From）",
-            value=date_from_value,
             key="date_from",
         )
 
     with col13:
-        date_to_value = date.today()
-        if loaded_data.get("date_to"):
-            try:
-                date_to_value = datetime.strptime(
-                    loaded_data["date_to"], "%Y-%m-%d"
-                ).date()
-            except:
-                pass
         date_to = st.date_input(
             "📅 出張日（To）",
-            value=date_to_value,
             key="date_to",
         )
     with col14:
+
         destination = render_suggest_input(
-            "🌍 出張先",
-            suggests.get("destination", []),
-            "destination_trip",
+            label="🌍 出張先",
+            options=suggests.get("destination", []),
             initial_value=loaded_data.get("destination", ""),
+            key_prefix="destination_trip",
             enable_suggest=enable_suggest,
         )
 
@@ -384,25 +393,27 @@ def render_expense_form_businessTrip(
     )
     col21, col22, col23 = st.columns(3)
     with col21:
+
         departure = render_suggest_input(
-            "📍 出発",
-            suggests.get("departure", []),
-            "departure_trip",
+            label="📍 出発",
+            options=suggests.get("departure", []),
+            key_prefix="departure_trip",
             initial_value=loaded_data.get("departure", ""),
             enable_suggest=enable_suggest,
         )
     with col22:
+
         arrival = render_suggest_input(
-            "🏁 到着",
-            suggests.get("arrival", []),
-            "arrival_trip",
+            label="🏁 到着",
+            options=suggests.get("arrival", []),
+            key_prefix="arrival_trip",
             initial_value=loaded_data.get("arrival", ""),
             enable_suggest=enable_suggest,
         )
     with col23:
+
         is_roundtrip = st.checkbox(
             "🔄 往復",
-            value=loaded_data.get("is_roundtrip", False),
             key="is_roundtrip_trip",
         )
 
@@ -413,11 +424,11 @@ def render_expense_form_businessTrip(
     )
     col_amt_l, col_amt_r = st.columns(2)
     with col_amt_l:
+        st.session_state.setdefault("amount_trip", loaded_data.get("amount", 0))
         amount = st.number_input(
             "💰 金額",
             min_value=0,
             step=100,
-            value=loaded_data.get("amount", 0),
             key="amount_trip",
         )
     with col_amt_r:
@@ -432,18 +443,20 @@ def render_expense_form_businessTrip(
     )
     col31, col32, col33, col34 = st.columns(4)
     with col31:
+
         car_name = render_suggest_input(
-            "🚗 車名",
-            suggests.get("car_name", []),
-            "car_name_trip",
+            label="🚗 車名",
+            options=suggests.get("car_name", []),
+            key_prefix="car_name_trip",
             initial_value=loaded_data.get("car_name", ""),
             enable_suggest=enable_suggest,
         )
     with col32:
+
         car_number = render_suggest_input(
-            "🔢 ナンバー",
-            suggests.get("car_number", []),
-            "car_number_trip",
+            label="🔢 ナンバー",
+            options=suggests.get("car_number", []),
+            key_prefix="car_number_trip",
             initial_value=loaded_data.get("car_number", ""),
             enable_suggest=enable_suggest,
         )
@@ -475,33 +488,41 @@ def render_expense_form_businessTrip(
     )
     col41, col42, col43, col44 = st.columns(4)
     with col41:
+        st.session_state.setdefault(
+            "allowance_day", loaded_data.get("allowance_day", 0)
+        )
         allowance_day = st.number_input(
             "📋 日当日数",
             min_value=0,
             step=1,
-            value=loaded_data.get("allowance_day", 0),
             key="allowance_day",
         )
     with col42:
+        st.session_state.setdefault(
+            "daily_allowance", loaded_data.get("daily_allowance", 0)
+        )
         daily_allowance = st.number_input(
             "💷 日当金額",
             min_value=0,
-            value=loaded_data.get("daily_allowance", 0),
             key="daily_allowance",
         )
     with col43:
+        st.session_state.setdefault(
+            "accommodation_day", loaded_data.get("accommodation_day", 0)
+        )
         accommodation_day = st.number_input(
             "🏨 宿泊日数",
             min_value=0,
             step=1,
-            value=loaded_data.get("accommodation_day", 0),
             key="accommodation_day",
         )
     with col44:
+        st.session_state.setdefault(
+            "accommodation_fee", loaded_data.get("accommodation_fee", 0)
+        )
         accommodation_fee = st.number_input(
             "💵 宿泊費用",
             min_value=0,
-            value=loaded_data.get("accommodation_fee", 0),
             key="accommodation_fee",
         )
 
@@ -510,10 +531,11 @@ def render_expense_form_businessTrip(
         "<div style='background: #2E86AB11; padding: 12px; border-radius: 8px; margin: 15px 0;'><span style='color: #2E86AB; font-weight: bold;'>📝 備考</span></div>",
         unsafe_allow_html=True,
     )
+
     purpose = render_suggest_input(
-        "出張目的",
-        suggests.get("purpose", []),
-        "purpose_trip",
+        label="出張目的",
+        options=suggests.get("purpose", []),
+        key_prefix="purpose_trip",
         initial_value=loaded_data.get("purpose", ""),
         enable_suggest=enable_suggest,
     )
@@ -575,69 +597,57 @@ def render_expense_form_businessTrip(
             st.success(f"出張明細を{lb}しました。")
             st.session_state[smi.CATEGORY] = None
 
-            # キャンセル時はセッション状態をクリアして次回は空白状態にする
-            if lb == "キャンセル":
-                # フォーム関連のキーをすべてクリア
-                form_keys = [
-                    "user",
-                    "date_from",
-                    "date_to",
-                    "destination",
-                    "departure",
-                    "arrival",
-                    "is_roundtrip",
-                    "amount",
-                    "total",
-                    "car_name",
-                    "car_number",
-                    "transportation",
-                    "purpose",
-                    "allowance_day",
-                    "daily_allowance",
-                    "accommodation_day",
-                    "accommodation_fee",
-                    "uploaded_file",
-                    "loaded_submission",
-                ]
-                for key in form_keys:
-                    if key in st.session_state:
-                        del st.session_state[key]
+            # フォームキーをセッション状態から削除するユーティリティ関数を呼び出す
+            del_form_key_session_state()
 
             st.rerun()
 
 
-# def render_expense_rows(category_order, defaults, suggest, task_usecase: ExpenseReport):
-#     """明細入力UI"""
-#     if "rows" not in st.session_state:
-#         st.session_state["rows"] = []
-
-#     # --- クイック追加 ---
-#     st.caption("よく使う区分から追加")
-#     pill_cols = st.columns(len(category_order))
-#     for i, cat in enumerate(category_order):
-#         if pill_cols[i].button(f"{cat} 追加", use_container_width=True):
-#             row = {
-#                 "id": f"r{len(st.session_state['rows']) + 1}",
-#                 "区分": cat,
-#                 "日付": date.today(),
-#                 "金額": 0,
-#                 "税": defaults.get("tax", 10),
-#                 "支払": defaults.get("payment", "立替"),
-#                 "摘要": "",
-#             }
-#             st.session_state["rows"].append(row)
-#             task_usecase.add_event(event=EventType.BUTTON.value, category=cat)
-
-#     # --- 明細行の描画 ---
-#     for row in st.session_state["rows"]:
-#         with st.expander(f"明細: {row['区分']} / {row['id']}", expanded=True):
-#             render_row_editor(row, suggest, task_usecase)
-
-#     return st.session_state["rows"]
-
-
 def render_summary(category_order, button_order, config, mode):
-    """右側のサマリパネル"""
+    """右側のサマリパネル（固定 / スクロール追従）を表示します。
+
+    CSSで幅と位置を調整し、デスクトップでは画面右端に固定表示、
+    スクロール時は top に従って追従する（sticky）ようにします。
+    """
+
+    # Sticky + Fixed のハイブリッド CSS:
+    # - モバイルや狭い画面では position: sticky を使い、カラム内で追従
+    # - ある幅以上（デスクトップ想定）では fixed にして画面右端に固定
+    css = """
+    <style>
+    /* wrapper */
+    #right-summary {
+      position: -webkit-sticky;
+      position: sticky;
+      top: 80px;
+      align-self: flex-start;
+      z-index: 9999;
+      padding-bottom: 40px;
+    }
+
+    /* 大画面では右端に固定表示し、幅を確保 */
+    @media (min-width: 1000px) {
+      #right-summary {
+        position: fixed !important;
+        right: 24px;
+        top: 80px;
+        width: 300px;
+      }
+      /* メインコンテンツとの重なりを抑えるため、右カラムの直前に適度な余白を入れる */
+      .css-1l02zno.e1fqkh3o2 { margin-right: 340px; }
+    }
+
+    /* 微調整: モバイル時の横幅オーバーを防ぐ */
+    @media (max-width: 999px) {
+      #right-summary { width: auto; }
+    }
+    </style>
+    """
+
+    st.markdown(css, unsafe_allow_html=True)
+
+    st.markdown("<div id='right-summary'>", unsafe_allow_html=True)
+
     st.markdown(
         "<h3 style='color: #2E86AB; text-align: center;'>📊 申請サマリ</h3>",
         unsafe_allow_html=True,
@@ -652,7 +662,10 @@ def render_summary(category_order, button_order, config, mode):
         "<span style='color: #2E86AB; font-weight: bold;'>🗂️ カテゴリ順</span>",
         unsafe_allow_html=True,
     )
-    st.caption(" > ".join(category_order))
+    try:
+        st.caption(" > ".join(category_order))
+    except Exception:
+        st.caption(str(category_order))
     st.markdown("</div>", unsafe_allow_html=True)
 
     # ボタン順
@@ -664,7 +677,10 @@ def render_summary(category_order, button_order, config, mode):
         "<span style='color: #A23B72; font-weight: bold;'>🔘 ボタン順</span>",
         unsafe_allow_html=True,
     )
-    st.caption(" > ".join(button_order))
+    try:
+        st.caption(" > ".join(button_order))
+    except Exception:
+        st.caption(str(button_order))
     st.markdown("</div>", unsafe_allow_html=True)
 
     if config:
@@ -677,3 +693,135 @@ def render_summary(category_order, button_order, config, mode):
             "<div style='background: linear-gradient(90deg, #F1800122, #F1800144); padding: 12px; border-radius: 8px; border-left: 4px solid #F18F01;'>ℹ️ 新規ユーザで実行中</div>",
             unsafe_allow_html=True,
         )
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+def render_ai_chat_panel(ai_agent: AIAgent, user_id, approval_gateway):
+    """右側パネル用のAIチャット（`st.sidebar` ではなく通常のカラム内で表示）。"""
+
+    st.markdown(
+        "<div style='padding: 6px 0;'><h4>🤖 AIアシスタント</h4></div>",
+        unsafe_allow_html=True,
+    )
+
+    # チャット履歴をセッション状態に保持（キーは文字列で管理）
+    if "ai_chat_history" not in st.session_state:
+        st.session_state["ai_chat_history"] = []
+
+    # チャット履歴を表示
+    for chat in st.session_state["ai_chat_history"]:
+        if chat["role"] == "user":
+            st.markdown(f"**あなた:** {chat['message']}")
+        else:
+            st.markdown(f"**AI:** {chat['message']}")
+
+    # ユーザー入力
+    user_input = st.text_input(
+        "AIに話しかける",
+        key="ai_chat_input",
+        placeholder="例: 昨日と同じ内容で申請したい",
+        label_visibility="collapsed",
+    )
+
+    if st.button("送信", key="ai_chat_send", use_container_width=True) and user_input:
+        # ユーザーメッセージを履歴に追加
+        st.session_state["ai_chat_history"].append(
+            {"role": "user", "message": user_input}
+        )
+
+        with st.spinner("AIが考え中..."):
+            intent_result = ai_agent.interpret_command(user_input)
+
+            st.session_state["ai_chat_history"].append(
+                {"role": "ai", "message": intent_result}
+            )
+
+            form_data_to_apply = ai_agent.apply_intent(intent_result, user_id)
+
+            if form_data_to_apply:
+                st.session_state["form_data_to_apply"] = form_data_to_apply
+                st.session_state["apply_ai_data"] = True
+
+        try:
+            # dump_session_state()
+            st.experimental_rerun()
+        except Exception:
+            pass
+
+
+def render_confirmation_with_preview(
+    task_usecase: ExpenseReport,
+    approval_gateway,
+    user_id,
+    category,
+    data,
+    on_success_message="申請が完了しました。",
+    on_failure_message="申請に失敗しました。",
+):
+    """確認ダイアログとプレビュー表示"""
+    st.session_state[smi.CATEGORY] = category
+
+    # 確認メッセージ
+    st.markdown(
+        "<div style='background: #2ECC7111; padding: 12px; border-radius: 8px; margin: 15px 0;'><span style='color: #2ECC71; font-weight: bold;'>✅ 確認</span></div>",
+        unsafe_allow_html=True,
+    )
+    st.json(data, expanded=False)
+
+    # アクションボタン
+    cols = st.columns(2)
+    with cols[0]:
+        if st.button("確定", use_container_width=True):
+            # イベントを追加
+            task_usecase.add_event(
+                event=EventType.FORMSUBMIT.value,
+                action=ActionType.SUBMIT.value,
+                value=data,
+            )
+            # DB に申請を保存
+            approval_gateway.add_submission(
+                user_id=user_id,
+                category=category,
+                data=data,
+            )
+            st.success(on_success_message)
+            st.session_state["submission_success"] = on_success_message
+
+    with cols[1]:
+        if st.button("キャンセル", use_container_width=True):
+            st.success("キャンセルしました。")
+            st.session_state[smi.CATEGORY] = None
+            st.session_state["loaded_submission"] = {}
+            st.session_state["apply_ai_data"] = False
+
+    # 過去の申請データがあれば表示
+    if user_id and category:
+        past_data = approval_gateway.get_past_submissions(user_id, category)
+        if past_data:
+            st.markdown(
+                "<div style='background: #F39C1211; padding: 12px; border-radius: 8px; margin: 15px 0;'><span style='color: #F39C12; font-weight: bold;'>📂 過去の申請データ</span></div>",
+                unsafe_allow_html=True,
+            )
+            for data in past_data:
+                st.json(data, expanded=False)
+                st.markdown("---")
+
+
+# 確認用関数: session_state の内容をログに出力
+import logging
+import json
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)  # 必要に応じて INFO/DEBUG に
+
+
+def dump_session_state():
+    try:
+        snapshot = {str(k): st.session_state[k] for k in st.session_state}
+        print(
+            "session_state snapshot: %s",
+            json.dumps(snapshot, default=str, ensure_ascii=False),
+        )
+    except Exception:
+        logger.exception("failed to dump session_state")

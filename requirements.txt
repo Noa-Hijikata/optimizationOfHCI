@@ -1,0 +1,6 @@
+streamlit>=1.34.0,<2
+python-dotenv==1.0.0
+# New Google GenAI client (pin a known stable version)
+google-genai==0.7.0
+# Ensure protobuf is a modern version compatible with google-genai
+protobuf>=5.26.1,<6
