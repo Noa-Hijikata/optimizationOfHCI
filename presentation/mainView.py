@@ -195,28 +195,6 @@ def run_app():
     # --- サイドバー（設定入力） ---
     user_config = render_sidebar()
 
-    # region --- 開発用デバッグ表示（セッション状態の主要キーを常に可視化） ---
-    # with st.expander("🔧 Dev: session_state snapshot (debug)", expanded=True):
-    #     keys = [
-    #         "form_data_to_apply",
-    #         "ai_chat_history",
-    #         "ai_chat_input",
-    #         "ai_last_error",
-    #         "loaded_submission",
-    #         "apply_ai_data",
-    #         smi.USER_ID,
-    #         smi.MODE,
-    #         smi.TASK_STARTED,
-    #         smi.CATEGORY,
-    #     ]
-    #     for k in keys:
-    #         try:
-    #             val = st.session_state.get(k, None)
-    #         except Exception:
-    #             val = "<unreadable>"
-    #         st.write(f"{k}:", val)
-    # endregion
-
     # region --- UIモード変更時のセッション状態リセット ---
     if (
         smi.MODE in st.session_state
@@ -351,102 +329,6 @@ def run_app():
                             action=ActionType.CATEGORY_SELECT,
                             value=None,
                         )
-
-        if st.session_state.get(smi.CATEGORY) == CAT_TRNSPORTS:
-            # デバッグ: ユーザー操作でモーダルが開くか確認するための手動ボタン
-            if st.button(
-                "🔧 Dev: モーダルを手動で開く（交通費）", key="dev_open_trnsprts"
-            ):
-                render_expense_form_trnsprts(task_usecase, approval_gateway)
-            # 通常は自動で開く想定だが、環境によってはユーザー操作が必要なため手動ボタンも用意
-            render_expense_form_trnsprts(task_usecase, approval_gateway)
-            # ---------- デバッグ: インラインでフォームを表示して値が反映されるか確認 ----------
-            if st.button(
-                "🔧 Dev: インラインで交通フォームを表示",
-                key="dev_inline_trnsprts_toggle",
-            ):
-                st.session_state["dev_show_inline_trnsprts"] = not st.session_state.get(
-                    "dev_show_inline_trnsprts", False
-                )
-
-            if st.session_state.get("dev_show_inline_trnsprts"):
-                with st.expander("Dev: Inline Transport Form (debug)", expanded=True):
-                    ld = st.session_state.get("loaded_submission", {}) or {}
-                    d_col1, d_col2, d_col3 = st.columns(3)
-                    with d_col1:
-                        st.text_input(
-                            "👤 申請者 (dev)", value=ld.get("user", ""), key="dev_user"
-                        )
-                        st.date_input(
-                            "📅 日付 (dev)", value=ld.get("date", ""), key="dev_date"
-                        )
-                        st.text_input(
-                            "🎯 目的地 (dev)",
-                            value=ld.get("destination", ""),
-                            key="dev_destination",
-                        )
-                    with d_col2:
-                        st.text_input(
-                            "📍 出発 (dev)",
-                            value=ld.get("departure", ""),
-                            key="dev_departure",
-                        )
-                        st.text_input(
-                            "🏁 到着 (dev)",
-                            value=ld.get("arrival", ""),
-                            key="dev_arrival",
-                        )
-                        st.checkbox(
-                            "🔄 往復 (dev)",
-                            value=ld.get("is_roundtrip", False),
-                            key="dev_is_roundtrip",
-                        )
-                    with d_col3:
-                        st.number_input(
-                            "💰 金額 (dev)", value=ld.get("amount", 0), key="dev_amount"
-                        )
-                        st.text_input(
-                            "🚗 車名 (dev)",
-                            value=ld.get("car_name", ""),
-                            key="dev_car_name",
-                        )
-                        st.text_input(
-                            "🔢 ナンバー (dev)",
-                            value=ld.get("car_number", ""),
-                            key="dev_car_number",
-                        )
-
-                    if st.button(
-                        "Dev: 適用してウィジェットに反映",
-                        key="dev_apply_inline_trnsprts",
-                    ):
-                        # コピーして通常のウィジェットキーへ反映させる
-                        mapping = {
-                            "user": "dev_user",
-                            "date": "dev_date",
-                            "destination": "dev_destination",
-                            "departure": "dev_departure",
-                            "arrival": "dev_arrival",
-                            "is_roundtrip": "dev_is_roundtrip",
-                            "amount": "dev_amount",
-                            "car_name": "dev_car_name",
-                            "car_number": "dev_car_number",
-                        }
-                        for dst, src in mapping.items():
-                            st.session_state[dst] = st.session_state.get(src)
-
-                        st.success(
-                            "Dev: 値をウィジェットに反映しました（次回レンダリングで表示されます）"
-                        )
-                        st.session_state["apply_ai_data"] = False
-                        st.session_state["loaded_submission"] = ld
-                        st.experimental_rerun()
-        if st.session_state.get(smi.CATEGORY) == CAT_BUSINESS_TRIP:
-            if st.button(
-                "🔧 Dev: モーダルを手動で開く（出張）", key="dev_open_business"
-            ):
-                render_expense_form_businessTrip(task_usecase, approval_gateway)
-            render_expense_form_businessTrip(task_usecase, approval_gateway)
 
         # endregion
 

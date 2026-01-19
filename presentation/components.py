@@ -661,7 +661,7 @@ def render_summary(category_order, button_order, config, mode):
 
 
 def render_ai_chat_panel(ai_agent: AIAgent, user_id, approval_gateway):
-    """右側パネル用のAIチャット（`st.sidebar` ではなく通常のカラム内で表示）。"""
+    """右側パネル用のAIチャット（st.chat_input を使用）。"""
 
     st.markdown(
         "<div style='padding: 6px 0;'><h4>🤖 AIアシスタント</h4></div>",
@@ -673,72 +673,75 @@ def render_ai_chat_panel(ai_agent: AIAgent, user_id, approval_gateway):
         st.session_state["ai_chat_history"] = []
 
     # チャット履歴を表示
-    for chat in st.session_state["ai_chat_history"]:
-        if chat["role"] == "user":
-            st.markdown(f"**あなた:** {chat['message']}")
-        else:
-            st.markdown(f"**アシスタント:** {chat['message']}")
+    chat_container = st.container()
+    with chat_container:
+        for chat in st.session_state["ai_chat_history"]:
+            role = "user" if chat["role"] == "user" else "assistant"
+            with st.chat_message(role):
+                st.markdown(chat["message"])
 
-    # ユーザー入力
-    user_input = st.text_input(
-        "AIに話しかける",
-        key="ai_chat_input",
-        placeholder="例: 昨日と同じ内容で申請したい",
-        label_visibility="collapsed",
-    )
-
-    if st.button("送信", key="ai_chat_send", use_container_width=True) and user_input:
+    # ユーザー入力 (st.chat_input を使用)
+    if user_input := st.chat_input("例: 昨日と同じ内容で申請したい"):
         # ユーザーメッセージを履歴に追加
-        # 送信前の履歴を取得してAIに渡すことで、現在の入力に対するコンテキストとする
-        history = st.session_state["ai_chat_history"].copy()
         st.session_state["ai_chat_history"].append(
             {"role": "user", "message": user_input}
         )
+        # 即座にユーザーの入力を表示
+        with chat_container:
+            with st.chat_message("user"):
+                st.markdown(user_input)
 
         with st.spinner("AIが考え中..."):
+            # 送信前の履歴を取得してAIに渡すことで、現在の入力に対するコンテキストとする
+            history = st.session_state["ai_chat_history"][:-1]
+
             # 1. 意図解釈
             intent_result = ai_agent.interpret_command(user_input, history=history)
+            print(intent_result)
 
-            # エラーが発生した場合は履歴に表示して終了
+            # エラーが発生した場合は履歴に表示
             if isinstance(intent_result, str) and intent_result.startswith(
                 "(AI error)"
             ):
-                st.session_state["ai_chat_history"].append(
-                    {"role": "ai", "message": intent_result}
-                )
-                del st.session_state["ai_chat_input"]
-                st.rerun()
-
-            # 2. 検索と絞り込み or 新規提案
-            result = ai_agent.apply_intent(intent_result, user_id)
-
-            if result["status"] == "success":
-                # AIがカテゴリを特定している場合は反映
-                if "category" in result:
-                    st.session_state[smi.CATEGORY] = result["category"]
-
-                msg = result.get("message", "内容をフォームに反映しました。")
+                msg = intent_result
                 st.session_state["ai_chat_history"].append(
                     {"role": "ai", "message": msg}
                 )
-                st.session_state["form_data_to_apply"] = result["data"]
-                st.session_state["apply_ai_data"] = True
+                with chat_container:
+                    with st.chat_message("assistant"):
+                        st.markdown(msg)
             else:
-                # 絞れなかった場合、AIに聞き返させる
-                clarification = ai_agent.generate_clarification(
-                    user_input, history, result["status"], result.get("candidates")
-                )
-                st.session_state["ai_chat_history"].append(
-                    {"role": "ai", "message": clarification}
-                )
+                # 2. 検索と絞り込み or 新規提案
+                result = ai_agent.apply_intent(intent_result, user_id)
+                print(result.get("status", "no status"))
 
-        try:
-            # dump_session_state()
-            if "ai_chat_input" in st.session_state:
-                del st.session_state["ai_chat_input"]
-            st.rerun()
-        except Exception:
-            pass
+                if result["status"] == "success":
+                    # AIがカテゴリを特定している場合は反映
+                    if "category" in result:
+                        st.session_state[smi.CATEGORY] = result["category"]
+
+                    msg = result.get("message", "内容をフォームに反映しました。")
+                    st.session_state["ai_chat_history"].append(
+                        {"role": "ai", "message": msg}
+                    )
+                    st.session_state["form_data_to_apply"] = result["data"]
+                    st.session_state["apply_ai_data"] = True
+                else:
+                    # 絞れなかった場合、AIに聞き返させる
+                    msg = ai_agent.generate_clarification(
+                        user_input, history, result["status"], result.get("candidates")
+                    )
+                    st.session_state["ai_chat_history"].append(
+                        {"role": "ai", "message": msg}
+                    )
+
+                # AIの回答を表示
+                with chat_container:
+                    with st.chat_message("assistant"):
+                        st.markdown(msg)
+
+        # 表示を更新するために再実行
+        st.rerun()
 
 
 def render_confirmation_with_preview(
