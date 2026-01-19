@@ -37,15 +37,14 @@ CAT_TRNSPORTS = "交通費精算"
 CAT_BUSINESS_TRIP = "出張精算"
 
 CATEGORIES = [
+    "経費申請",
+    "経費精算",
+    "交通費事前申請",
     CAT_TRNSPORTS,
     "出張申請",
     CAT_BUSINESS_TRIP,
     "海外出張申請",
     "海外出張精算",
-    "経費申請",
-    "経費精算",
-    "交際費申請",
-    "交際費精算",
 ]
 
 # UI定数
