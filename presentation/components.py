@@ -756,6 +756,12 @@ def render_ai_chat_panel(
                     st.session_state["ai_chat_history"].append(
                         {"role": "ai", "message": msg}
                     )
+                elif result["status"] == "just_answer":
+                    # 直接回答
+                    msg = result.get("message", "回答を取得できませんでした。")
+                    st.session_state["ai_chat_history"].append(
+                        {"role": "ai", "message": msg}
+                    )
                 else:
                     # 絞れなかった場合、AIに聞き返させる
                     msg = ai_agent.generate_clarification(

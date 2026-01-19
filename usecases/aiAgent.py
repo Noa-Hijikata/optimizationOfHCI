@@ -123,6 +123,16 @@ class AIAgent:
                 "message": f"文字サイズを {size} に変更しました。",
             }
 
+        # just_answer: AIによる直接回答
+        if intent.get("intent") == "just_answer":
+            answer = intent.get(
+                "answer", "申し訳ありませんが、お答えできませんでした。"
+            )
+            return {
+                "status": "just_answer",
+                "message": answer,
+            }
+
         # 検索条件の組み立て
         criteria = {
             "days_ago": intent.get("days_ago"),
