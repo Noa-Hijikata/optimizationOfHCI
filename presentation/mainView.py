@@ -58,7 +58,7 @@ def run_app():
         """
         <style>
         :root {
-            --primary-color: #FF8C00;
+            --primary-color: #E67E22;
             --secondary-color: #555555;
             --accent-color: #FFA500;
             --background-color: #FFFFFF;
