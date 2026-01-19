@@ -114,6 +114,15 @@ class AIAgent:
                 "message": f"内容を推測しました。フォームをご確認ください。",
             }
 
+        # change_font_size: 文字サイズ変更
+        if intent.get("intent") == "change_font_size":
+            size = intent.get("size", "normal")
+            return {
+                "status": "change_font_size",
+                "size": size,
+                "message": f"文字サイズを {size} に変更しました。",
+            }
+
         # 検索条件の組み立て
         criteria = {
             "days_ago": intent.get("days_ago"),

@@ -22,6 +22,7 @@ def getPredictExpenseReportPrompt(
             - 'fetch_previous_by_destination': 特定の目的地の申請データを取得したい場合。
             - 'suggest_new': 新しい申請内容を提案してほしい場合（ユーザーが「〜へ行った」「〜の申請をしたい」と言った時）。
             - 'set_amount': 金額を設定したい場合。
+            - 'change_font_size': 文字サイズ（フォントサイズ）を変更したい場合。
 
             金額推測のルール:
             - 'suggest_new' の際、departure (出発地) と arrival (到着地) が判明していて金額が不明な場合、一般的な公共交通機関や高速料金を考慮したもっともらしい金額（円単位）を推測して amount に含めてください。
@@ -30,9 +31,24 @@ def getPredictExpenseReportPrompt(
             抽出するJSONの構造（suggest_newの場合）:
             {{"intent": "suggest_new", "category": "交通費精算"|"出張精算", "data": {{"destination": "...", "departure": "...", "arrival": "...", "amount": <int>, "purpose": "...", "transportation": "..."}}}}
 
+            抽出するJSONの構造（change_font_sizeの場合）:
+            {{"intent": "change_font_size", "size": "large"|"small"|"normal"|<int>}}
+
             例:
             ユーザー: 「昨日と同じ内容で」
             AI: {{"intent": "fetch_previous", "days_ago": 1}}
+
+            ユーザー: 「文字を大きくして」
+            AI: {{"intent": "change_font_size", "size": "large"}}
+
+            ユーザー: 「文字サイズを20pxにして」
+            AI: {{"intent": "change_font_size", "size": 20}}
+
+            ユーザー: 「フォントを小さくして」
+            AI: {{"intent": "change_font_size", "size": "small"}}
+
+            ユーザー: 「文字サイズを元に戻して」
+            AI: {{"intent": "change_font_size", "size": "normal"}}
 
             ユーザー: 「交通費を5000円で申請したい」
             AI: {{"intent": "set_amount", "amount": 5000, "category": "transportation"}}

@@ -76,20 +76,50 @@ class Personalization:
 
         os.makedirs(self.config_dir, exist_ok=True)
 
+        # --- ファイルベースの設定読込 ---
+        file_path = os.path.join(self.config_dir, f"{user_id}.json")
+        file_settings = {}
+        if os.path.exists(file_path):
+            with open(file_path, "r", encoding="utf-8") as f:
+                file_settings = json.load(f)
+
         if not os.path.exists(LOG_FILE):
+            # ログがなくてもファイル設定があれば返す
+            if file_settings:
+                return {
+                    "category_order": CATEGORIES,
+                    "trnsprts_config": {"suggests": {}, "order": []},
+                    "bussinessTrip_config": {"suggests": {}, "order": []},
+                    "defaults": {},
+                    "font_size": file_settings.get("font_size", 16),
+                }
             return None
         logs = pd.read_csv(LOG_FILE, dtype=str)
 
         if logs is None or logs.empty:
-            return None
-
-        # 必要なカラムが無ければ中断
-        if "user_id" not in logs.columns or "event" not in logs.columns:
+            # logs が空でもファイル設定があれば返す
+            if file_settings:
+                return {
+                    "category_order": CATEGORIES,
+                    "trnsprts_config": {"suggests": {}, "order": []},
+                    "bussinessTrip_config": {"suggests": {}, "order": []},
+                    "defaults": {},
+                    "font_size": file_settings.get("font_size", 16),
+                }
             return None
 
         # --- ユーザーフィルタリング ---
         g = logs[logs["user_id"] == user_id]
         if g.empty:
+            # logs にユーザーがいなくてもファイル設定があれば返す
+            if file_settings:
+                return {
+                    "category_order": CATEGORIES,
+                    "trnsprts_config": {"suggests": {}, "order": []},
+                    "bussinessTrip_config": {"suggests": {}, "order": []},
+                    "defaults": {},
+                    "font_size": file_settings.get("font_size", 16),
+                }
             return None
 
         # --- カテゴリ追加ボタン頻度 (event='button' & category in CATEGORIES) ---
@@ -126,9 +156,28 @@ class Personalization:
             "trnsprts_config": trnsprts_config,
             "bussinessTrip_config": bussinessTrip_config,
             "defaults": {},
+            "font_size": file_settings.get("font_size", 16),
         }
 
         return cfg
+
+    def update_font_size(self, user_id, size):
+        """フォントサイズを更新して保存する"""
+        if not user_id:
+            return
+
+        os.makedirs(self.config_dir, exist_ok=True)
+        file_path = os.path.join(self.config_dir, f"{user_id}.json")
+
+        settings = {}
+        if os.path.exists(file_path):
+            with open(file_path, "r", encoding="utf-8") as f:
+                settings = json.load(f)
+
+        settings["font_size"] = size
+
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(settings, f, ensure_ascii=False, indent=2)
 
     def load_trnsprts_config(self, g):
         suggests = self.load_suggests_config(g, CAT_TRNSPORTS)

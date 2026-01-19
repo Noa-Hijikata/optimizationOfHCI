@@ -660,7 +660,9 @@ def render_summary(category_order, button_order, config, mode):
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-def render_ai_chat_panel(ai_agent: AIAgent, user_id, approval_gateway):
+def render_ai_chat_panel(
+    ai_agent: AIAgent, user_id, approval_gateway, config_usecase=None
+):
     """右側パネル用のAIチャット（st.chat_input を使用）。"""
 
     st.markdown(
@@ -726,6 +728,34 @@ def render_ai_chat_panel(ai_agent: AIAgent, user_id, approval_gateway):
                     )
                     st.session_state["form_data_to_apply"] = result["data"]
                     st.session_state["apply_ai_data"] = True
+                elif result["status"] == "change_font_size":
+                    # フォントサイズの変更
+                    size_val = result.get("size", "normal")
+
+                    if isinstance(size_val, int):
+                        new_size = size_val
+                        size_str = f"{size_val}px"
+                    elif size_val == "large":
+                        new_size = 24
+                        size_str = "large"
+                    elif size_val == "small":
+                        new_size = 12
+                        size_str = "small"
+                    else:
+                        new_size = 16
+                        size_str = "normal"
+
+                    if config_usecase and user_id:
+                        config_usecase.update_font_size(user_id, new_size)
+                        # session_state 内の config も更新
+                        if smi.CONFIG not in st.session_state:
+                            st.session_state[smi.CONFIG] = {}
+                        st.session_state[smi.CONFIG]["font_size"] = new_size
+
+                    msg = f"文字サイズを {size_str} ({new_size}px) に変更しました。"
+                    st.session_state["ai_chat_history"].append(
+                        {"role": "ai", "message": msg}
+                    )
                 else:
                     # 絞れなかった場合、AIに聞き返させる
                     msg = ai_agent.generate_clarification(

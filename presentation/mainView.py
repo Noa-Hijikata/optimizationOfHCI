@@ -262,15 +262,27 @@ def run_app():
         if smi.CONFIG in st.session_state:
             del st.session_state[smi.CONFIG]
 
-    config = st.session_state.get(smi.CONFIG)
-    if config:
-        category_order = config.get("category_order", CATEGORIES)
-    else:
-        category_order = CATEGORIES
+    config = st.session_state.get(smi.CONFIG, {})
+    category_order = config.get("category_order", CATEGORIES)
+    font_size = config.get("font_size", 16)
     # endregion
 
     # region --- メインUI ---
     st.title("💼 経費精算システム（実験用）")
+
+    # region CSS 動的生成
+    font_css = f"""
+        <style>
+        html, body, [class*="css"], .stMarkdown, .stButton, .stInput, .stSelectbox, .stTextArea, p, span, div, li {{
+            font-size: {font_size}px !important;
+        }}
+        h1 {{ font-size: {font_size * 1.5}px !important; }}
+        h2 {{ font-size: {font_size * 1.3}px !important; }}
+        h3 {{ font-size: {font_size * 1.1}px !important; }}
+        </style>
+    """
+    st.markdown(font_css, unsafe_allow_html=True)
+    # endregion
 
     # region モード表示
     if user_config["mode"] == UIMode.PERSONALIZE.value:
@@ -446,7 +458,10 @@ def run_app():
             try:
                 ai_agent = AIAgent()
                 render_ai_chat_panel(
-                    ai_agent, user_config.get("user_id", ""), approval_gateway
+                    ai_agent,
+                    user_config.get("user_id", ""),
+                    approval_gateway,
+                    config_usecase,
                 )
             except Exception as e:
                 # AI 初期化に失敗してもメイン処理は継続
