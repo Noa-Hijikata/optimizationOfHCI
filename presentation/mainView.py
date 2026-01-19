@@ -267,6 +267,49 @@ def run_app():
     font_size = config.get("font_size", 16)
     # endregion
 
+    # region --- AI からの適用要求があればセッションにデータを反映 ---
+    if st.session_state.get("apply_ai_data"):
+        form_data = st.session_state.get("form_data_to_apply", {}) or {}
+
+        # 1. カテゴリのマッピング（既に components.py で設定されている可能性が高いが念のため）
+        mapped = st.session_state.get(smi.CATEGORY)
+        if mapped:
+            st.session_state[smi.TASK_STARTED] = True
+
+        # 2. データの反映とキーのマッピング
+        existing = st.session_state.get("loaded_submission", {}) or {}
+        merged = {**existing, **form_data}
+        st.session_state["loaded_submission"] = merged
+
+        if mapped == CAT_BUSINESS_TRIP:
+            # 出張精算用のキー名への変換マップ
+            field_map = {
+                "destination": "destination_trip",
+                "departure": "departure_trip",
+                "arrival": "arrival_trip",
+                "amount": "amount_trip",
+                "date": "date_from",
+                "purpose": "purpose_trip",
+                "car_name": "car_name_trip",
+                "car_number": "car_number_trip",
+                "transportation": "transportation_trip",
+                "is_roundtrip": "is_roundtrip_trip",
+            }
+            for k, v in merged.items():
+                target_key = field_map.get(k, k)
+                st.session_state[target_key] = v
+                logging.info(
+                    f"Applied AI data to session_state (mapped): {target_key} = {v}"
+                )
+        else:
+            for k, v in merged.items():
+                st.session_state[k] = v
+                logging.info(f"Applied AI data to session_state: {k} = {v}")
+
+        st.session_state["apply_ai_data"] = False
+        st.rerun()
+    # endregion
+
     # region --- メインUI ---
     st.title("💼 経費精算システム（実験用）")
 
@@ -468,88 +511,6 @@ def run_app():
                 logger = logging.getLogger(__name__)
                 logger.warning("AI panel initialization failed: %s", e)
         # endregion
-    # endregion
-
-    # region --- AI からの適用要求があればセッションにデータを反映して再実行 ---
-    if st.session_state.get("apply_ai_data"):
-        form_data = st.session_state.get("form_data_to_apply", {}) or {}
-        # マージ: 既存の読み込みデータに追記/上書き
-        existing = st.session_state.get("loaded_submission", {}) or {}
-        merged = {**existing, **form_data}
-        st.session_state["loaded_submission"] = merged
-
-        # 便利のため、フォームの個別フィールドにもコピー（ウィジェットの value に反映される）
-        for k, v in merged.items():
-            # widget keys are expected to match these field names in forms
-            st.session_state[k] = v
-            logging.info(f"Applied AI data to session_state: {k} = {v}")
-
-        # AI がカテゴリを返していれば、そのカテゴリを選択してモーダルを開く
-        ai_category = form_data.get("category")
-
-        # AI が返すカテゴリ名は英語や短縮形の場合があるため、アプリ内のカテゴリ名へマッピングする
-        def _map_ai_category(cat):
-            if not cat:
-                return None
-            c = str(cat).strip().lower()
-            mapping = {
-                # English -> アプリ内カテゴリ
-                "transportation": CAT_TRNSPORTS,
-                "transport": CAT_TRNSPORTS,
-                "trnsprts": CAT_TRNSPORTS,
-                "交通費": CAT_TRNSPORTS,
-                "交通": CAT_TRNSPORTS,
-                "taxi": CAT_TRNSPORTS,
-                "train": CAT_TRNSPORTS,
-                "business": CAT_BUSINESS_TRIP,
-                "business_trip": CAT_BUSINESS_TRIP,
-                "出張": CAT_BUSINESS_TRIP,
-                "出張精算": CAT_BUSINESS_TRIP,
-                "出張申請": CAT_BUSINESS_TRIP,
-            }
-            return mapping.get(c)
-
-        mapped = _map_ai_category(ai_category)
-        if mapped:
-            st.session_state[smi.CATEGORY] = mapped
-            st.session_state[smi.TASK_STARTED] = True
-        else:
-            # AIがカテゴリを返していない場合は、返された form_data のキーから推論を試みる
-            inferred = None
-            if isinstance(form_data, dict):
-                # 出張っぽいフィールドがあれば出張モーダルを開く
-                if any(
-                    k in form_data
-                    for k in (
-                        "date_from",
-                        "date_to",
-                        "allowance_day",
-                        "accommodation_fee",
-                    )
-                ):
-                    inferred = CAT_BUSINESS_TRIP
-                # 交通費っぽいフィールドがあれば交通費モーダルを開く
-                elif any(
-                    k in form_data
-                    for k in (
-                        "destination",
-                        "departure",
-                        "arrival",
-                        "car_name",
-                        "transportation",
-                    )
-                ):
-                    inferred = CAT_TRNSPORTS
-
-            if inferred:
-                st.session_state[smi.CATEGORY] = inferred
-                st.session_state[smi.TASK_STARTED] = True
-
-        # フラグをクリアして再実行させる（ウィジェットは次のレンダリングで session_state から値を読む）
-        st.session_state["apply_ai_data"] = False
-        # optionally clear the stored form_data
-        # st.session_state.pop("form_data_to_apply", None)
-        st.rerun()
     # endregion
 
 
