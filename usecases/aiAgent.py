@@ -106,9 +106,6 @@ class AIAgent:
         if intent.get("intent") == "suggest_new":
             data = intent.get("data", {})
             category = intent.get("category", "交通費精算")
-            # 必要なデフォルト値を補完
-            if "total" not in data and "amount" in data:
-                data["total"] = data["amount"]
 
             return {
                 "status": "success",

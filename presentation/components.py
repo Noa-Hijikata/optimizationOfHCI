@@ -706,9 +706,8 @@ def render_ai_chat_panel(ai_agent: AIAgent, user_id, approval_gateway):
                 st.session_state["ai_chat_history"].append(
                     {"role": "ai", "message": intent_result}
                 )
+                del st.session_state["ai_chat_input"]
                 st.rerun()
-
-            print("AI intent_result:", intent_result)
 
             # 2. 検索と絞り込み or 新規提案
             result = ai_agent.apply_intent(intent_result, user_id)
@@ -735,6 +734,8 @@ def render_ai_chat_panel(ai_agent: AIAgent, user_id, approval_gateway):
 
         try:
             # dump_session_state()
+            if "ai_chat_input" in st.session_state:
+                del st.session_state["ai_chat_input"]
             st.rerun()
         except Exception:
             pass
