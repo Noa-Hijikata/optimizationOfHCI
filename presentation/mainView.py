@@ -58,132 +58,144 @@ def run_app():
         """
         <style>
         :root {
-            --primary-color: #2E86AB;
-            --secondary-color: #A23B72;
-            --accent-color: #F18F01;
-            --success-color: #06A77D;
-            --danger-color: #D62828;
+            --primary-color: #FF8C00;
+            --secondary-color: #555555;
+            --accent-color: #FFA500;
+            --background-color: #FFFFFF;
+            --sidebar-bg: #F8F9FA;
+            --text-color: #262730;
         }
         
         /* メインコンテナのスタイル */
         .main {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            background-color: var(--background-color);
         }
         
         /* ヘッダースタイル */
         h1 {
-            background: linear-gradient(90deg, #2E86AB, #A23B72);
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-            box-shadow: 0 4px 12px rgba(46, 134, 171, 0.3);
+            color: var(--primary-color);
+            background: transparent;
+            padding: 10px 0;
+            border-bottom: 2px solid var(--primary-color);
+            border-radius: 0;
+            text-align: left;
+            box-shadow: none;
+            font-weight: 700;
         }
         
         h2, h3 {
-            color: #2E86AB;
-            border-left: 4px solid #F18F01;
+            color: var(--text-color);
+            border-left: 4px solid var(--primary-color);
             padding-left: 12px;
-            margin-top: 20px;
+            margin-top: 25px;
+            font-weight: 600;
         }
         
         /* ボタンスタイル */
         .stButton > button {
-            background: linear-gradient(90deg, #2E86AB, #1F5A7F);
+            background: var(--primary-color);
             color: white;
             border: none;
             border-radius: 8px;
             font-weight: 600;
-            padding: 10px 20px;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 8px rgba(46, 134, 171, 0.2);
+            padding: 8px 16px;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(255, 140, 0, 0.2);
         }
         
         .stButton > button:hover {
-            background: linear-gradient(90deg, #1F5A7F, #2E86AB);
-            box-shadow: 0 4px 12px rgba(46, 134, 171, 0.4);
-            transform: translateY(-2px);
+            background: #E67E00;
+            box-shadow: 0 4px 8px rgba(255, 140, 0, 0.3);
+            transform: translateY(-1px);
         }
         
         /* メトリクスカード */
         .stMetric {
             background: white;
-            border-radius: 10px;
+            border: 1px solid #E0E0E0;
+            border-radius: 12px;
             padding: 16px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
         }
         
         /* コンテナ */
         .stContainer {
-            border-radius: 10px;
+            border-radius: 12px;
             background: white;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border: 1px solid #E0E0E0;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+            padding: 20px;
         }
         
         /* 成功メッセージ */
         .stAlert-success {
-            background-color: #06A77D;
-            color: white;
+            background-color: #FFF4E5;
+            color: #663C00;
+            border: 1px solid #FFD599;
             border-radius: 8px;
         }
         
         /* 情報メッセージ */
         .stAlert-info {
-            background-color: #2E86AB;
-            color: white;
+            background-color: #F0F7FF;
+            color: #004085;
+            border: 1px solid #B8DAFF;
             border-radius: 8px;
         }
         
         /* エラーメッセージ */
         .stAlert-error {
-            background-color: #D62828;
-            color: white;
+            background-color: #FFF5F5;
+            color: #C53030;
+            border: 1px solid #FEB2B2;
             border-radius: 8px;
         }
         
         /* ラジオボタン */
         .stRadio > div {
-            color: #2E86AB;
+            color: var(--text-color);
         }
         
         /* テキスト入力 */
         .stTextInput > div > div > input,
         .stNumberInput > div > div > input,
-        .stDateInput > div > div > input {
-            border-radius: 6px;
-            border: 2px solid #E0E0E0;
-            padding: 10px 12px;
+        .stDateInput > div > div > input,
+        .stSelectbox > div > div > div {
+            border-radius: 8px;
+            border: 1px solid #E0E0E0;
+            transition: border-color 0.2s;
         }
         
         .stTextInput > div > div > input:focus,
         .stNumberInput > div > div > input:focus,
         .stDateInput > div > div > input:focus {
-            border-color: #2E86AB;
-            box-shadow: 0 0 0 3px rgba(46, 134, 171, 0.1);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(255, 140, 0, 0.1);
         }
         
         /* サイドバー */
-        .stSidebar {
-            background: linear-gradient(180deg, #2E86AB, #1F5A7F);
-            color: white;
+        section[data-testid="stSidebar"] {
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid #E0E0E0;
         }
         
-        .stSidebar h1, .stSidebar h2, .stSidebar h3 {
-            color: white;
+        section[data-testid="stSidebar"] h1, 
+        section[data-testid="stSidebar"] h2, 
+        section[data-testid="stSidebar"] h3 {
+            color: var(--text-color);
             border: none;
             padding-left: 0;
         }
         
         /* キャプション */
         .stCaption {
-            color: #666;
-            font-weight: 500;
+            color: #888888;
         }
         
         /* ディバイダー */
         hr {
             border: none;
-            border-top: 2px solid #F18F01;
+            border-top: 1px solid #EEEEEE;
             margin: 20px 0;
         }
         </style>
@@ -263,13 +275,13 @@ def run_app():
     # region モード表示
     if user_config["mode"] == UIMode.PERSONALIZE.value:
         mode_badge = "🎨 パーソナライズUI"
-        mode_color = "#A23B72"
+        mode_color = "#FF8C00"
     else:
         mode_badge = "📋 固定UI"
-        mode_color = "#2E86AB"
+        mode_color = "#666666"
 
     st.markdown(
-        f"<div style='text-align: center; padding: 10px; background: linear-gradient(90deg, {mode_color}22, {mode_color}44); border-radius: 8px; margin-bottom: 20px;'><span style='color: {mode_color}; font-weight: bold;'>{mode_badge}</span></div>",
+        f"<div style='text-align: center; padding: 10px; border: 1px solid {mode_color}44; background: {mode_color}11; border-radius: 8px; margin-bottom: 20px;'><span style='color: {mode_color}; font-weight: bold;'>{mode_badge}</span></div>",
         unsafe_allow_html=True,
     )
     # endregion
@@ -284,7 +296,7 @@ def run_app():
         # 申請完了メッセージを表示
         if st.session_state.get("submission_success"):
             st.markdown(
-                f"<div style='background: linear-gradient(90deg, #06A77D, #05885F); color: white; padding: 15px; border-radius: 8px; margin-bottom: 15px;'><span style='font-size: 18px;'>✅ {st.session_state['submission_success']}</span></div>",
+                f"<div style='background: #FFF4E5; color: #663C00; padding: 15px; border-radius: 8px; border-left: 5px solid #FF8C00; margin-bottom: 15px;'><span style='font-size: 18px;'>✅ {st.session_state['submission_success']}</span></div>",
                 unsafe_allow_html=True,
             )
             del st.session_state["submission_success"]
@@ -305,7 +317,7 @@ def run_app():
         if st.session_state.get(smi.TASK_STARTED, False):
             # --- クイック追加 ---
             st.markdown(
-                "<div style='background: #2E86AB11; padding: 12px; border-radius: 8px; margin-bottom: 15px;'><span style='color: #2E86AB; font-weight: bold;'>⭐ よく使う区分から追加</span></div>",
+                "<div style='background: #FFF4E5; padding: 12px; border-radius: 8px; margin-bottom: 15px; border-left: 3px solid #FF8C00;'><span style='color: #FF8C00; font-weight: bold;'>⭐ よく使う区分から追加</span></div>",
                 unsafe_allow_html=True,
             )
             pill_cols = st.columns(len(category_order))
@@ -329,6 +341,12 @@ def run_app():
                             action=ActionType.CATEGORY_SELECT,
                             value=None,
                         )
+
+        if st.session_state.get(smi.CATEGORY) == CAT_TRNSPORTS:
+            render_expense_form_trnsprts(task_usecase, approval_gateway)
+
+        if st.session_state.get(smi.CATEGORY) == CAT_BUSINESS_TRIP:
+            render_expense_form_businessTrip(task_usecase, approval_gateway)
 
         # endregion
 
@@ -361,7 +379,7 @@ def run_app():
                                 # カテゴリに応じた情報表示
                                 if category == CAT_TRNSPORTS:
                                     st.markdown(
-                                        f"<span style='color: #2E86AB; font-weight: bold;'>{cat_icon} {category}</span> - {data.get('destination', 'N/A')}",
+                                        f"<span style='color: #FF8C00; font-weight: bold;'>{cat_icon} {category}</span> - {data.get('destination', 'N/A')}",
                                         unsafe_allow_html=True,
                                     )
                                     st.caption(
@@ -369,7 +387,7 @@ def run_app():
                                     )
                                 elif category == CAT_BUSINESS_TRIP:
                                     st.markdown(
-                                        f"<span style='color: #A23B72; font-weight: bold;'>{cat_icon} {category}</span> - {data.get('destination', 'N/A')}",
+                                        f"<span style='color: #FF8C00; font-weight: bold;'>{cat_icon} {category}</span> - {data.get('destination', 'N/A')}",
                                         unsafe_allow_html=True,
                                     )
                                     total_cost = (
@@ -384,7 +402,7 @@ def run_app():
                                     )
                                 else:
                                     st.markdown(
-                                        f"<span style='color: #F18F01; font-weight: bold;'>{cat_icon} {category}</span>",
+                                        f"<span style='color: #FF8C00; font-weight: bold;'>{cat_icon} {category}</span>",
                                         unsafe_allow_html=True,
                                     )
                                     st.caption(f"📅 {dt_str}")
@@ -409,12 +427,12 @@ def run_app():
                                     st.rerun()
                 else:
                     st.markdown(
-                        "<div style='background: #06A77D22; padding: 15px; border-radius: 8px; border-left: 4px solid #06A77D;'>ℹ️ 申請履歴がありません</div>",
+                        "<div style='background: #F8F9FA; padding: 15px; border-radius: 8px; border-left: 4px solid #DEE2E6;'>ℹ️ 申請履歴がありません</div>",
                         unsafe_allow_html=True,
                     )
             else:
                 st.markdown(
-                    "<div style='background: #F1800122; padding: 15px; border-radius: 8px; border-left: 4px solid #F18F01;'>ℹ️ ユーザーIDを入力して開始してください</div>",
+                    "<div style='background: #FFF4E5; padding: 15px; border-radius: 8px; border-left: 4px solid #FF8C00;'>ℹ️ ユーザーIDを入力して開始してください</div>",
                     unsafe_allow_html=True,
                 )
         # endregion

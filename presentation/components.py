@@ -137,7 +137,7 @@ def del_form_key_session_state():
 def render_expense_form_trnsprts(task_usecase: ExpenseReport, approval_gateway=None):
     """交通費申請フォームUI"""
     st.markdown(
-        "<div style='background: linear-gradient(90deg, #2E86AB22, #A23B7222); padding: 15px; border-radius: 8px; margin-bottom: 20px;'><h3 style='color: #2E86AB; margin: 0;'>🚗 交通費明細入力</h3></div>",
+        "<div style='background: #FFF4E5; padding: 15px; border-radius: 8px; border-left: 5px solid #FF8C00; margin-bottom: 20px;'><h3 style='color: #FF8C00; margin: 0;'>🚗 交通費明細入力</h3></div>",
         unsafe_allow_html=True,
     )
 
@@ -175,7 +175,7 @@ def render_expense_form_trnsprts(task_usecase: ExpenseReport, approval_gateway=N
 
     # 区間情報セクション
     st.markdown(
-        "<div style='background: #2E86AB11; padding: 12px; border-radius: 8px; margin: 15px 0;'><span style='color: #2E86AB; font-weight: bold;'>📍 区間情報</span></div>",
+        "<div style='background: #FFF4E5; padding: 12px; border-radius: 8px; margin: 15px 0; border-left: 3px solid #FF8C00;'><span style='color: #FF8C00; font-weight: bold;'>📍 区間情報</span></div>",
         unsafe_allow_html=True,
     )
     col21, col22, col23 = st.columns(3)
@@ -201,7 +201,7 @@ def render_expense_form_trnsprts(task_usecase: ExpenseReport, approval_gateway=N
 
     # 金額情報セクション
     st.markdown(
-        "<div style='background: #06A77D11; padding: 12px; border-radius: 8px; margin: 15px 0;'><span style='color: #06A77D; font-weight: bold;'>💰 金額情報</span></div>",
+        "<div style='background: #FFF4E5; padding: 12px; border-radius: 8px; margin: 15px 0; border-left: 3px solid #FF8C00;'><span style='color: #FF8C00; font-weight: bold;'>💰 金額情報</span></div>",
         unsafe_allow_html=True,
     )
     col_amount_l, col_amount_r = st.columns(2)
@@ -220,7 +220,7 @@ def render_expense_form_trnsprts(task_usecase: ExpenseReport, approval_gateway=N
 
     # 車両情報セクション
     st.markdown(
-        "<div style='background: #A23B7211; padding: 12px; border-radius: 8px; margin: 15px 0;'><span style='color: #A23B72; font-weight: bold;'>🚙 車両情報</span></div>",
+        "<div style='background: #FFF4E5; padding: 12px; border-radius: 8px; margin: 15px 0; border-left: 3px solid #FF8C00;'><span style='color: #FF8C00; font-weight: bold;'>🚙 車両情報</span></div>",
         unsafe_allow_html=True,
     )
     col31, col32, col33, col34 = st.columns(4)
@@ -265,7 +265,7 @@ def render_expense_form_trnsprts(task_usecase: ExpenseReport, approval_gateway=N
 
     # 備考セクション
     st.markdown(
-        "<div style='background: #F1800111; padding: 12px; border-radius: 8px; margin: 15px 0;'><span style='color: #F18F01; font-weight: bold;'>📝 備考</span></div>",
+        "<div style='background: #FFF4E5; padding: 12px; border-radius: 8px; margin: 15px 0; border-left: 3px solid #FF8C00;'><span style='color: #FF8C00; font-weight: bold;'>📝 備考</span></div>",
         unsafe_allow_html=True,
     )
 
@@ -279,7 +279,7 @@ def render_expense_form_trnsprts(task_usecase: ExpenseReport, approval_gateway=N
 
     # submitted = st.form_submit_button("確定")
     st.markdown(
-        "<div style='background: linear-gradient(90deg, #2E86AB11, #A23B7211); padding: 15px; border-radius: 8px; margin: 20px 0;'></div>",
+        "<div style='background: #EEEEEE; padding: 1px; border-radius: 1px; margin: 20px 0;'></div>",
         unsafe_allow_html=True,
     )
 
@@ -339,7 +339,7 @@ def render_expense_form_businessTrip(
 ):
     """出張申請フォームUI"""
     st.markdown(
-        "<div style='background: linear-gradient(90deg, #A23B7222, #F1800122); padding: 15px; border-radius: 8px; margin-bottom: 20px;'><h3 style='color: #A23B72; margin: 0;'>✈️ 出張費明細入力</h3></div>",
+        "<div style='background: #FFF4E5; padding: 15px; border-radius: 8px; border-left: 5px solid #FF8C00; margin-bottom: 20px;'><h3 style='color: #FF8C00; margin: 0;'>✈️ 出張費明細入力</h3></div>",
         unsafe_allow_html=True,
     )
 
@@ -386,7 +386,7 @@ def render_expense_form_businessTrip(
 
     # 区間情報セクション
     st.markdown(
-        "<div style='background: #2E86AB11; padding: 12px; border-radius: 8px; margin: 15px 0;'><span style='color: #2E86AB; font-weight: bold;'>📍 区間情報</span></div>",
+        "<div style='background: #FFF4E5; padding: 12px; border-radius: 8px; margin: 15px 0; border-left: 3px solid #FF8C00;'><span style='color: #FF8C00; font-weight: bold;'>📍 区間情報</span></div>",
         unsafe_allow_html=True,
     )
     col21, col22, col23 = st.columns(3)
@@ -417,7 +417,7 @@ def render_expense_form_businessTrip(
 
     # 交通費セクション
     st.markdown(
-        "<div style='background: #06A77D11; padding: 12px; border-radius: 8px; margin: 15px 0;'><span style='color: #06A77D; font-weight: bold;'>💰 交通費</span></div>",
+        "<div style='background: #FFF4E5; padding: 12px; border-radius: 8px; margin: 15px 0; border-left: 3px solid #FF8C00;'><span style='color: #FF8C00; font-weight: bold;'>💰 交通費</span></div>",
         unsafe_allow_html=True,
     )
     col_amt_l, col_amt_r = st.columns(2)
@@ -436,7 +436,7 @@ def render_expense_form_businessTrip(
 
     # 車両情報セクション
     st.markdown(
-        "<div style='background: #A23B7211; padding: 12px; border-radius: 8px; margin: 15px 0;'><span style='color: #A23B72; font-weight: bold;'>🚙 車両情報</span></div>",
+        "<div style='background: #FFF4E5; padding: 12px; border-radius: 8px; margin: 15px 0; border-left: 3px solid #FF8C00;'><span style='color: #FF8C00; font-weight: bold;'>🚙 車両情報</span></div>",
         unsafe_allow_html=True,
     )
     col31, col32, col33, col34 = st.columns(4)
@@ -481,7 +481,7 @@ def render_expense_form_businessTrip(
 
     # 手当・宿泊費セクション
     st.markdown(
-        "<div style='background: #F1800111; padding: 12px; border-radius: 8px; margin: 15px 0;'><span style='color: #F18F01; font-weight: bold;'>🏨 手当・宿泊費</span></div>",
+        "<div style='background: #FFF4E5; padding: 12px; border-radius: 8px; margin: 15px 0; border-left: 3px solid #FF8C00;'><span style='color: #FF8C00; font-weight: bold;'>🏨 手当・宿泊費</span></div>",
         unsafe_allow_html=True,
     )
     col41, col42, col43, col44 = st.columns(4)
@@ -526,7 +526,7 @@ def render_expense_form_businessTrip(
 
     # 備考セクション
     st.markdown(
-        "<div style='background: #2E86AB11; padding: 12px; border-radius: 8px; margin: 15px 0;'><span style='color: #2E86AB; font-weight: bold;'>📝 備考</span></div>",
+        "<div style='background: #FFF4E5; padding: 12px; border-radius: 8px; margin: 15px 0; border-left: 3px solid #FF8C00;'><span style='color: #FF8C00; font-weight: bold;'>📝 備考</span></div>",
         unsafe_allow_html=True,
     )
 
@@ -540,7 +540,7 @@ def render_expense_form_businessTrip(
 
     # submitted = st.form_submit_button("確定")
     st.markdown(
-        "<div style='background: linear-gradient(90deg, #A23B7211, #F1800111); padding: 15px; border-radius: 8px; margin: 20px 0;'></div>",
+        "<div style='background: #EEEEEE; padding: 1px; border-radius: 1px; margin: 20px 0;'></div>",
         unsafe_allow_html=True,
     )
 
@@ -648,12 +648,12 @@ def render_summary(category_order, button_order, config, mode):
 
     if config:
         st.markdown(
-            "<div style='background: linear-gradient(90deg, #06A77D22, #06A77D44); padding: 12px; border-radius: 8px; border-left: 4px solid #06A77D;'>✅ 個別化設定を適用中</div>",
+            "<div style='background: #FFF4E5; padding: 12px; border-radius: 8px; border-left: 4px solid #FF8C00; color: #663C00;'>✅ 個別化設定を適用中</div>",
             unsafe_allow_html=True,
         )
     elif mode == UIMode.PERSONALIZE.value:
         st.markdown(
-            "<div style='background: linear-gradient(90deg, #F1800122, #F1800144); padding: 12px; border-radius: 8px; border-left: 4px solid #F18F01;'>ℹ️ 新規ユーザで実行中</div>",
+            "<div style='background: #F8F9FA; padding: 12px; border-radius: 8px; border-left: 4px solid #666666; color: #333333;'>ℹ️ 新規ユーザで実行中</div>",
             unsafe_allow_html=True,
         )
 
@@ -758,7 +758,7 @@ def render_confirmation_with_preview(
 
     # 確認メッセージ
     st.markdown(
-        "<div style='background: #2ECC7111; padding: 12px; border-radius: 8px; margin: 15px 0;'><span style='color: #2ECC71; font-weight: bold;'>✅ 確認</span></div>",
+        "<div style='background: #FFF4E5; padding: 12px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #FF8C00;'><span style='color: #FF8C00; font-weight: bold;'>✅ 確認</span></div>",
         unsafe_allow_html=True,
     )
     st.json(data, expanded=False)
@@ -794,7 +794,7 @@ def render_confirmation_with_preview(
         past_data = approval_gateway.get_past_submissions(user_id, category)
         if past_data:
             st.markdown(
-                "<div style='background: #F39C1211; padding: 12px; border-radius: 8px; margin: 15px 0;'><span style='color: #F39C12; font-weight: bold;'>📂 過去の申請データ</span></div>",
+                "<div style='background: #F8F9FA; padding: 12px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #FF8C00;'><span style='color: #FF8C00; font-weight: bold;'>📂 過去の申請データ</span></div>",
                 unsafe_allow_html=True,
             )
             for data in past_data:
