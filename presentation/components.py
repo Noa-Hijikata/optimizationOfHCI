@@ -141,6 +141,11 @@ def render_expense_form_trnsprts(task_usecase: ExpenseReport, approval_gateway=N
         unsafe_allow_html=True,
     )
 
+    # 承認却下理由の表示
+    if approval_gateway:
+        user_id = st.session_state.get(smi.USER_ID)
+        render_rejection_reasons(approval_gateway, user_id)
+
     config, suggests, order = {}, {}, {}
     # パーソナライズUIの場合のみサジェスト情報を取得
     enable_suggest = st.session_state.get(smi.MODE) == UIMode.PERSONALIZE.value
@@ -342,6 +347,11 @@ def render_expense_form_businessTrip(
         "<div style='background: #FFF4E5; padding: 15px; border-radius: 8px; border-left: 5px solid #FF8C00; margin-bottom: 20px;'><h3 style='color: #FF8C00; margin: 0;'>✈️ 出張費明細入力</h3></div>",
         unsafe_allow_html=True,
     )
+
+    # 承認却下理由の表示
+    if approval_gateway:
+        user_id = st.session_state.get(smi.USER_ID)
+        render_rejection_reasons(approval_gateway, user_id)
 
     config, suggests, order = {}, {}, {}
     # パーソナライズUIの場合のみサジェスト情報を取得
@@ -836,6 +846,30 @@ def render_confirmation_with_preview(
             for data in past_data:
                 st.json(data, expanded=False)
                 st.markdown("---")
+
+
+def render_rejection_reasons(approval_gateway, user_id):
+    """却下理由の表示（パーソナライズモード用）"""
+    if st.session_state.get(smi.MODE) != UIMode.PERSONALIZE.value:
+        return
+
+    if not approval_gateway:
+        return
+
+    st.markdown(
+        "<div style='background: #FFF0F0; padding: 10px; border-radius: 8px; border-left: 5px solid #FF4B4B; margin-bottom: 15px;'><h4 style='color: #FF4B4B; margin: 0;'>⚠️ 過去の却下理由の傾向</h4></div>",
+        unsafe_allow_html=True,
+    )
+
+    st.caption("👤 あなたの主な却下理由 (TOP3)")
+    reasons_user = approval_gateway.get_top_rejection_reasons_by_user(user_id, limit=3)
+    if reasons_user:
+        for r in reasons_user:
+            st.write(f"- {r['reason']} ({r['count']}件)")
+    else:
+        st.write("データがありません")
+    
+    st.markdown("---")
 
 
 # 確認用関数: session_state の内容をログに出力

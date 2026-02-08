@@ -205,3 +205,49 @@ class ApprovalRepository:
             )
 
         return result
+
+    def get_top_rejection_reasons(self, limit: int = 3) -> List[Dict[str, Any]]:
+        """却下理由のTOP Nを取得"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            SELECT rejection_reason, COUNT(*) as count
+            FROM submissions
+            WHERE status = 'rejected' AND rejection_reason IS NOT NULL AND rejection_reason != ''
+            GROUP BY rejection_reason
+            ORDER BY count DESC
+            LIMIT ?
+            """,
+            (limit,),
+        )
+
+        rows = cursor.fetchall()
+        conn.close()
+
+        return [{"reason": row[0], "count": row[1]} for row in rows]
+
+    def get_top_rejection_reasons_by_user(
+        self, user_id: str, limit: int = 3
+    ) -> List[Dict[str, Any]]:
+        """ユーザーごとの却下理由のTOP Nを取得"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            SELECT rejection_reason, COUNT(*) as count
+            FROM submissions
+            WHERE user_id = ? AND status = 'rejected' AND rejection_reason IS NOT NULL AND rejection_reason != ''
+            GROUP BY rejection_reason
+            ORDER BY count DESC
+            LIMIT ?
+            """,
+            (user_id, limit),
+        )
+
+        rows = cursor.fetchall()
+        conn.close()
+
+        return [{"reason": row[0], "count": row[1]} for row in rows]
