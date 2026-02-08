@@ -38,6 +38,8 @@ class ExpenseReport:
         """却下理由のTOP Nを取得する"""
         return approval_repo.get_top_rejection_reasons(limit=limit)
 
-    def get_top_rejection_reasons_by_user(self, approval_repo, user_id: str, limit: int = 3):
+    def get_top_rejection_reasons_by_user(
+        self, approval_repo, user_id: str, limit: int = 3
+    ):
         """ユーザーごとの却下理由のTOP Nを取得する"""
         return approval_repo.get_top_rejection_reasons_by_user(user_id, limit=limit)

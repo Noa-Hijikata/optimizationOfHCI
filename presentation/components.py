@@ -868,7 +868,7 @@ def render_rejection_reasons(approval_gateway, user_id):
             st.write(f"- {r['reason']} ({r['count']}件)")
     else:
         st.write("データがありません")
-    
+
     st.markdown("---")
 
 
