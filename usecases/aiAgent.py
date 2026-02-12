@@ -44,14 +44,12 @@ class AIAgent:
         )
         self.log_repo = log_repo or CSVLogRepository(log_path="data/logs.csv")
 
-        # lazy import / configure when needed
-        self._client_configured = False
-        self._genai: genai.Client = None
+        # クライアントを一度だけ初期化
+        self._client = genai.Client(api_key=self.api_key)
 
     def interpret_command(self, text: str, history: list = None) -> str:
         """ユーザの意図を解釈した結果を返す"""
         try:
-            client = genai.Client(api_key=self.api_key)
             # 利用可能なカテゴリリストを取得
             from presentation.const import CATEGORIES  # 遅延インポート
 
@@ -59,14 +57,13 @@ class AIAgent:
             available_categories = ", ".join([f"'{cat}'" for cat in CATEGORIES])
 
             prompt = getPredictExpenseReportPrompt(text, available_categories, history)
-            resp = client.models.generate_content(
+            resp = self._client.models.generate_content(
                 model="gemini-3-flash-preview", contents=prompt
             )
             return resp.text
 
         except Exception as e:
-            logger.exception("AI client configuration failed: %s", e)
-            # タプルではなく、エラーメッセージ文字列のみを返すように修正
+            logger.exception("AI interpret_command failed: %s", e)
             return f"(AI error) 応答を取得できませんでした: {str(e)}"
 
     def fetch_recent_submission(
@@ -208,15 +205,29 @@ class AIAgent:
     ) -> str:
         """ユーザーに聞き返すための文言を生成する"""
         try:
-            client = genai.Client(api_key=self.api_key)
             prompt = getRefinementPrompt(user_input, history, status, candidates)
-            resp = client.models.generate_content(
+            resp = self._client.models.generate_content(
                 model="gemini-3-flash-preview", contents=prompt
             )
             return resp.text
         except Exception as e:
             logger.exception("Failed to generate clarification: %s", e)
             return "すみません、条件に合う申請を絞り込めませんでした。もう少し詳しく教えていただけますか？"
+
+    def stream_clarification(
+        self, user_input: str, history: list, status: str, candidates: list = None
+    ):
+        """ユーザーに聞き返すための文言をストリーミング生成する"""
+        try:
+            prompt = getRefinementPrompt(user_input, history, status, candidates)
+            responses = self._client.models.generate_content_stream(
+                model="gemini-3-flash-preview", contents=prompt
+            )
+            for response in responses:
+                yield response.text
+        except Exception as e:
+            logger.exception("Failed to stream clarification: %s", e)
+            yield "すみません、条件に合う申請を絞り込めませんでした。もう少し詳しく教えていただけますか？"
 
     def fetch_recent_submission_by_days(
         self, user_id: str, days_ago: int = 1, limit: int = 5

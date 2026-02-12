@@ -733,6 +733,9 @@ def render_ai_chat_panel(
                         st.session_state[smi.CATEGORY] = result["category"]
 
                     msg = result.get("message", "内容をフォームに反映しました。")
+                    with chat_container:
+                        with st.chat_message("assistant"):
+                            st.markdown(msg)
                     st.session_state["ai_chat_history"].append(
                         {"role": "ai", "message": msg}
                     )
@@ -763,28 +766,36 @@ def render_ai_chat_panel(
                         st.session_state[smi.CONFIG]["font_size"] = new_size
 
                     msg = f"文字サイズを {size_str} ({new_size}px) に変更しました。"
+                    with chat_container:
+                        with st.chat_message("assistant"):
+                            st.markdown(msg)
                     st.session_state["ai_chat_history"].append(
                         {"role": "ai", "message": msg}
                     )
                 elif result["status"] == "just_answer":
                     # 直接回答
                     msg = result.get("message", "回答を取得できませんでした。")
+                    with chat_container:
+                        with st.chat_message("assistant"):
+                            st.markdown(msg)
                     st.session_state["ai_chat_history"].append(
                         {"role": "ai", "message": msg}
                     )
                 else:
-                    # 絞れなかった場合、AIに聞き返させる
-                    msg = ai_agent.generate_clarification(
-                        user_input, history, result["status"], result.get("candidates")
-                    )
+                    # 絞れなかった場合、AIに聞き返させる（ストリーミング表示）
+                    with chat_container:
+                        with st.chat_message("assistant"):
+                            msg = st.write_stream(
+                                ai_agent.stream_clarification(
+                                    user_input,
+                                    history,
+                                    result["status"],
+                                    result.get("candidates"),
+                                )
+                            )
                     st.session_state["ai_chat_history"].append(
                         {"role": "ai", "message": msg}
                     )
-
-                # AIの回答を表示
-                with chat_container:
-                    with st.chat_message("assistant"):
-                        st.markdown(msg)
 
         # 表示を更新するために再実行
         st.rerun()
