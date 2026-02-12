@@ -154,7 +154,9 @@ def render_submission_details(submission: dict, approval_repo):
 
         if st.session_state.get("show_reject_input"):
             st.markdown("---")
-            reason = st.text_area("却下理由を入力してください", key="modal_reject_reason")
+            reason = st.text_area(
+                "却下理由を入力してください", key="modal_reject_reason"
+            )
             col_c1, col_c2 = st.columns(2)
             with col_c1:
                 if st.button("却下を確定", use_container_width=True, type="primary"):
@@ -365,7 +367,9 @@ def run_approval_app():
                             unsafe_allow_html=True,
                         )
                     with col4:
-                        if st.button("詳細", key=f"apprv_{i}", use_container_width=True):
+                        if st.button(
+                            "詳細", key=f"apprv_{i}", use_container_width=True
+                        ):
                             show_submission_modal(submission["id"], approval_repo)
 
     with tab3:
